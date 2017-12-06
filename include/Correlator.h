@@ -5,7 +5,7 @@
 #ifndef C_CORRELATOR_H
 #define C_CORRELATOR_H
 
-#include <cmath>*
+#include <cmath>
 #include <vector>
 #include <numeric>
 
