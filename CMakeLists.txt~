@@ -1,0 +1,23 @@
+cmake_minimum_required(VERSION 2.8)
+project(GACF)
+
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+add_compile_options(-std=c++14)
+
+include_directories(include)
+
+file(GLOB SOURCES "src/*.cpp")
+
+if(CMAKE_COMPILER_IS_GNUCC)
+			   message(WARNING "Require at least gcc-4.7, version used:" ${CMAKE_CXX_COMPILER})
+
+endif()
+
+message("Your C++ compiler supports these C++ features:")
+foreach(i ${CMAKE_CXX_COMPILE_FEATURES})
+  message("${i}")
+endforeach()
+
+add_executable(GACF ${SOURCES})
