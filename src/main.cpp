@@ -62,7 +62,7 @@ int main() {
      */
 //    vector<double> t_values;
 //    double t_length = test_import.normalised_timeseries()->back();
-    int n_values = 100;
+    int n_values = 1000;
 //    double gap_length_days = 1.5;
 //    double sampling_length_minutes = 10.;
 //    int jump_count = 0;
