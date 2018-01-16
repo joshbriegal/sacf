@@ -23,11 +23,11 @@ void data_output_to_file(string filename, vector<double>* timeseries, vector<dou
 
 void createCorrelation(Correlator* col, double n_values, MemberPointerType weight_function, double alpha){
     double k = 0.;
-    while(k < col->normalised_timeseries()->back()){
+    while(k < 30.){
           // col->normalised_timeseries()->back(){
         col->standardCorrelation(k, weight_function, alpha);
 //        k += col->normalised_timeseries()->back() / n_values;
-        k += col->normalised_timeseries()->back() / n_values;
+        k += 30. / n_values;
     }
 }
 
@@ -62,7 +62,7 @@ int main() {
      */
 //    vector<double> t_values;
 //    double t_length = test_import.normalised_timeseries()->back();
-    int n_values = 1000;
+    int n_values = 10000;
 //    double gap_length_days = 1.5;
 //    double sampling_length_minutes = 10.;
 //    int jump_count = 0;
@@ -73,15 +73,15 @@ int main() {
 //        t_values.push_back(i * (sampling_length_minutes / (60. * 24.)));// + jump_count * gap_length_days);
 //        t_values.push_back(max((double)i*t_length/n_values + (((double)(rand() % 1) - 0.5) * 100/n_values),0.)); //completely random sampling
 //    }
-    vector<double> x_values;
+    vector<double> x_values;// = *test_import.values();
     vector<double> t_values = *test_import.timeseries();
-//    transform(t_values.begin(), t_values.end(), back_inserter(x_values), [](double t) -> double {
-//        return cos(t * (2.*M_PI / 0.416)); });
-    std::random_device generator;
-    std::normal_distribution<double> distribution (0.,1.0);
-    for(int i = 0; i < t_values.size(); i++){
-        x_values.push_back(distribution(generator));
-    }
+    transform(t_values.begin(), t_values.end(), back_inserter(x_values), [](double t) -> double {
+        return cos(t * (2.*M_PI / 26.8)); });
+//    std::random_device generator;
+//    std::normal_distribution<double> distribution (0.,1.0);
+//    for(int i = 0; i < t_values.size(); i++){
+//        x_values.push_back(distribution(generator));
+//    }
 //    transform(t_values.begin(), t_values.end(), back_inserter(x_values), [generator, distribution](double t)-> double { return distribution(generator); });
 
     //create data structure
@@ -97,8 +97,8 @@ int main() {
 //    alpha_values.push_back(0.01);
 //    alpha_values.push_back(0.1);
 //    alpha_values.push_back(1.0);
-//    alpha_values.push_back(10.0);
-    alpha_values.push_back(test.median_time());
+    alpha_values.push_back(10.0);
+//    alpha_values.push_back(test.median_time());
 //    alpha_values.push_back(.5);
 //    alpha_values.push_back(.6);
 //    alpha_values.push_back(.7);
@@ -112,16 +112,16 @@ int main() {
 
 
 
-//    for(auto const& alpha: alpha_values){
-//
-//        test_col.clearCorrelation(); // clear previous correlation data from data
-//
-//        MemberPointerType weight_function= &Correlator::fractionWeightFunction;
-//
-//        createCorrelation(&test_col, n_values,  weight_function, alpha);
-//        correlationsToFile(&test_col, alpha, "fractionWeightFunction");
-//        cout << "alpha value " << alpha << " complete for fractionWeightFunction" << endl;
-//    }
+    for(auto const& alpha: alpha_values){
+
+        test_col.clearCorrelation(); // clear previous correlation data from data
+
+        MemberPointerType weight_function= &Correlator::fractionWeightFunction;
+
+        createCorrelation(&test_col, n_values,  weight_function, alpha);
+        correlationsToFile(&test_col, alpha, "fractionWeightFunction");
+        cout << "alpha value " << alpha << " complete for fractionWeightFunction" << endl;
+    }
 
     for(auto const& alpha: alpha_values){
 

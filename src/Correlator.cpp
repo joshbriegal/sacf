@@ -126,6 +126,7 @@ void Correlator::standardCorrelation(double k, MemberPointerType weight_function
 
     auto const& col_it = new CorrelationIterator(k);
     this->naturalSelectionFunctionIdx(col_it);
+//    this->fastSelectionFunctionIdx(col_it);
     this->deltaT(col_it);
     this->getWeights(col_it, weight_function, alpha);
     this->findCorrelation(col_it);
