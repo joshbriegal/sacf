@@ -22,7 +22,6 @@ def find_correlation(correlator):
         print 'Correlation found for timestep {} of {}'.format(i, number_of_steps)
         k += correlator.lag_resolution
         i += 1
-    return None
 
 find_correlation(c)
 plt.plot(c.lag_timeseries(), c.correlations())
