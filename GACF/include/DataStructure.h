@@ -28,11 +28,18 @@ public:
     DataStructure(std::vector<double>*, std::vector<double>*, std::vector<double>*);
 
     // returnable values from the dataset
-    std::vector<double>* values();
-    std::vector<double>* errors();
-    std::vector<double>* timeseries();
-    std::vector<double>* normalised_timeseries();
-    std::vector<double>* normalised_values();
+    std::vector<double>* rvalues();
+    std::vector<double>* rerrors();
+    std::vector<double>* rtimeseries();
+    std::vector<double>* rnormalised_timeseries();
+    std::vector<double>* rnormalised_values();
+
+    std::vector<double> values();
+    std::vector<double> errors();
+    std::vector<double> timeseries();
+    std::vector<double> normalised_timeseries();
+    std::vector<double> normalised_values();
+
     double mean_X();
     double median_time() ;
     double max_time();

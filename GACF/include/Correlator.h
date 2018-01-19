@@ -29,13 +29,17 @@ struct CorrelationData{
 
 class Correlator;
 
-typedef double (Correlator::*MemberPointerType)(double, double);
+//typedef double (Correlator::*MemberPointerType)(double, double);
 
 class Correlator{
 
     DataStructure* data;
     CorrelationData correlation_data;
     double N;
+
+    double max_lag;
+    double lag_resolution;
+    double alpha; // characteristic length scale of weight functions
 
 public:
     explicit Correlator(DataStructure*);
@@ -44,19 +48,36 @@ public:
     void naturalSelectionFunctionIdx(CorrelationIterator*);
     void fastSelectionFunctionIdx(CorrelationIterator*);
     void deltaT(CorrelationIterator*);
-    void getWeights(CorrelationIterator*, MemberPointerType, double);
     void findCorrelation(CorrelationIterator*);
-    void standardCorrelation(double, MemberPointerType, double);
+    void addCorrelationData(CorrelationIterator*);
+//    void standardCorrelation(double, MemberPointerType, double);
 
     void clearCorrelation() {correlation_data = *new CorrelationData; };
 
-    double fractionWeightFunction(double, double);
-    double gaussianWeightFunction(double, double);
+    double fractionWeightFunction(double);
+    double gaussianWeightFunction(double);
 
-    std::vector<double>* normalised_timeseries();
-    std::vector<double>* values();
-    std::vector<double>* lag_timeseries();
-    std::vector<double>* correlations();
+    void getFractionWeights(CorrelationIterator*);
+    void getGaussianWeights(CorrelationIterator*);
+
+    void setMaxLag(double);
+    double getMaxLag();
+
+    void setLagResolution(double);
+    double getLagResolution();
+
+    void setAlpha(double);
+    double getAlpha();
+
+    std::vector<double>* rnormalised_timeseries();
+    std::vector<double>* rvalues();
+    std::vector<double>* rlag_timeseries();
+    std::vector<double>* rcorrelations();
+
+    std::vector<double> normalised_timeseries();
+    std::vector<double> values();
+    std::vector<double> lag_timeseries();
+    std::vector<double> correlations();
 
 
 };

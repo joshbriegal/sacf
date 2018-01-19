@@ -69,11 +69,19 @@ void DataStructure::settMedian(){ //with respect to normalised timeseries
     else {t_median = norm_t[size / 2];}
 }
 
-std::vector<double>* DataStructure::values() { return &X; };
-std::vector<double>* DataStructure::errors(){ return &X_err; };
-std::vector<double>* DataStructure::timeseries(){ return &t; };
-std::vector<double>* DataStructure::normalised_timeseries(){ return &norm_t; };
-std::vector<double>* DataStructure::normalised_values(){ return &norm_X; };
+std::vector<double>* DataStructure::rvalues() { return &X; };
+std::vector<double>* DataStructure::rerrors(){ return &X_err; };
+std::vector<double>* DataStructure::rtimeseries(){ return &t; };
+std::vector<double>* DataStructure::rnormalised_timeseries(){ return &norm_t; };
+std::vector<double>* DataStructure::rnormalised_values(){ return &norm_X; };
+
+std::vector<double> DataStructure::values() { return X; };
+std::vector<double> DataStructure::errors(){ return X_err; };
+std::vector<double> DataStructure::timeseries(){ return t; };
+std::vector<double> DataStructure::normalised_timeseries(){ return norm_t; };
+std::vector<double> DataStructure::normalised_values(){ return norm_X; };
+
+
 
 double DataStructure::mean_X() { return X_mean; };
 double DataStructure::median_time() { return t_median; };
