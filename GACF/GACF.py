@@ -39,6 +39,15 @@ def find_correlation(corr, selection_function='natural', weight_function='gaussi
 
 def find_correlation_from_file(filename, max_lag=None, lag_resolution=None, selection_function='natural',
                                weight_function='gaussian', alpha=None):
+    """
+    :param filename: string filename containing data in columns X, t, X_err
+    :param max_lag: max lag in days
+    :param lag_resolution: lag resolution in days
+    :param selection_function: 'fast' or 'natural' - see paper for more details
+    :param weight_function: 'gaussian' or 'fractional' see paper for more details
+    :param alpha: weight function characteristic length scale, default is t.median_time
+    :return: { 'lag_timeseries':[], 'correlations':[] }
+    """
     ds = DataStructure(filename)
     corr = Correlator(ds)
 
@@ -49,6 +58,17 @@ def find_correlation_from_file(filename, max_lag=None, lag_resolution=None, sele
 
 def find_correlation_from_lists(values, timeseries, errors=None, max_lag=None, lag_resolution=None,
                                 selection_function='natural', weight_function='gaussian', alpha=None):
+    """
+    :param values: list of X values
+    :param timeseries: list of time values
+    :param errors: (optional) list of errors on X values
+    :param max_lag: max lag in days
+    :param lag_resolution: lag resolution in days
+    :param selection_function: 'fast' or 'natural' - see paper for more details
+    :param weight_function: 'gaussian' or 'fractional' see paper for more details
+    :param alpha: weight function characteristic length scale, default is t.median_time
+    :return: { 'lag_timeseries':[], 'correlations':[] }
+    """
     if errors is None:
         ds = DataStructure(values, timeseries)
     else:
