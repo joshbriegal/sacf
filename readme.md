@@ -3,20 +3,25 @@
 
 ## Installation
 Only requirement for installation is CMAKE (https://cmake.org).
-From above top level run 'pip install ./GACF'
-
+From above top level run 
+```
+pip install ./GACF
+```
 in python:
 
+```python
 from GACF import *
 
 correlation_dictionary = find_correlation_from_file('filepath')
+```
 OR
+```python
 correlation_dictionary = find_correlation_from_lists(values, timeseries, errors=None)
-
+```
 with options:
-
+```python
 max_lag=None, lag_resolution=None, selection_function='natural', weight_function='gaussian', alpha=None
-
+```
 ### Examples
 
 function_import_sine_wave_test.py creates a randomly sampled sine wave and finds the autocorrelation
