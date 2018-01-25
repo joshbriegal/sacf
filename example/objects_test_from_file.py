@@ -6,6 +6,8 @@ filename = 'NG0522-2518_031001_LC_tbin=10min.dat'
 ds = DataStructure(filename)
 print 'loaded data {} to DataStructure object ds'.format(filename)
 c = Correlator(ds)
+c.max_lag = 50
+# c.lag_resolution = 1 / 24. / 60.
 print 'setup correlation for file {} with properties: \n alpha = {} \n max lag = {} \n lag resolution = {}'.format(filename, c.alpha, c.max_lag, c.lag_resolution)
 
 def find_correlation(correlator):
@@ -24,7 +26,7 @@ def find_correlation(correlator):
         i += 1
 
 find_correlation(c)
-plt.plot(c.lag_timeseries(), c.correlations())
+plt.plot(c.lag_timeseries(), c.correlations()) #, s=1, marker='o')
 ax = plt.gca()
 ax.set_title('Autocorrelations for file {}'.format(filename))
 ax.set_xlabel('Lag / Days')

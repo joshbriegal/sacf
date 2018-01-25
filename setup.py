@@ -69,4 +69,5 @@ setup(
     ext_modules=[CMakeExtension('GACF.correlator', 'GACF'), CMakeExtension('GACF.datastructure', 'GACF')],
     cmdclass=dict(build_ext=CMakeBuild),
     zip_safe=False,
+    install_requires=['tqdm']
 )

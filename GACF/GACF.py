@@ -1,5 +1,6 @@
 from datastructure import DataStructure
 from correlator import CorrelationIterator, Correlator
+from tqdm import tqdm
 
 SELECTION_FUNCTIONS = {
     'fast': Correlator.fastSelectionFunctionIdx,
@@ -23,18 +24,23 @@ def set_up_correlation(corr, max_lag=None, lag_resolution=None, alpha=None):
 
 
 def find_correlation(corr, selection_function='natural', weight_function='gaussian'):
-    k = 0
-    i = 1
-    number_of_steps = corr.max_lag / corr.lag_resolution
-    while k < corr.max_lag:
+    def lag_generator(max_lag, lag_resolution):
+        k = 0
+        while (k < max_lag):
+            yield k
+            k += lag_resolution
+
+    num_steps = int(round(corr.max_lag / corr.lag_resolution))
+
+    for k in tqdm(lag_generator(corr.max_lag, corr.lag_resolution),
+                  desc='Calculating correlations',
+                  total=num_steps):
         col_it = CorrelationIterator(k)
         SELECTION_FUNCTIONS[selection_function](corr, col_it)
         corr.deltaT(col_it)
         WEIGHT_FUNCTIONS[weight_function](corr, col_it)
         corr.findCorrelation(col_it)
         corr.addCorrelationData(col_it)
-        k += corr.lag_resolution
-        i += 1
 
 
 def find_correlation_from_file(filename, max_lag=None, lag_resolution=None, selection_function='natural',
