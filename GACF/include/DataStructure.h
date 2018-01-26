@@ -5,6 +5,7 @@
 #ifndef C_DATASTRUCTURE_H
 #define C_DATASTRUCTURE_H
 
+#include <string>
 #include <vector>
 
 class DataStructure{

@@ -8,6 +8,7 @@
 #include <cmath>
 #include <vector>
 #include <numeric>
+#include <string>
 
 #include "DataStructure.h"
 
