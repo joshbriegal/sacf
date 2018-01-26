@@ -45,15 +45,14 @@ class CMakeBuild(build_ext):
                 cmake_args += ['-A', 'x64']
             build_args += ['--', '/m']
         else:
-	    try:
-		GPP_COMPILER = subprocess.check_output('which g++', shell=True).strip('\n\t\r')
-		GCC_COMPILER = subprocess.check_output('which gcc', shell=True).strip('\n\t\r')
-		print '-DCMAKE_CXX_COMPILER=' + GPP_COMPILER, '-DCMAKE_C_COMPILER=' + GCC_COMPILER
-	    except subprocess.CalledProcessError as e:
-		GPP_COMPILER, GCC_COMPILER = None, None
-	    else:
-		cmake_args += ['-DCMAKE_CXX_COMPILER=' + GPP_COMPILER,
-		               '-DCMAKE_C_COMPILER=' + GCC_COMPILER]
+            try:
+                GPP_COMPILER = subprocess.check_output('which g++', shell=True).strip('\n\t\r')
+                GCC_COMPILER = subprocess.check_output('which gcc', shell=True).strip('\n\t\r')
+            except subprocess.CalledProcessError as e:
+                GPP_COMPILER, GCC_COMPILER = None, None
+            else:
+                cmake_args += ['-DCMAKE_CXX_COMPILER=' + GPP_COMPILER,
+                               '-DCMAKE_C_COMPILER=' + GCC_COMPILER]
             cmake_args += ['-DCMAKE_BUILD_TYPE=' + cfg]
             build_args += ['--', '-j2']
 
@@ -73,8 +72,6 @@ setup(
     description='A generalisation of the autocorrelation function, for non-uniformly sampled timeseries data',
     long_description='',
     packages=['GACF'],
-    # ext_modules=[CMakeExtension('GACF.datastructure', 'GACF/datastructure'),
-    #              CMakeExtension('GACF.correlator', 'GACF/correlator')],
     ext_modules=[CMakeExtension('GACF.correlator', 'GACF'), CMakeExtension('GACF.datastructure', 'GACF')],
     cmdclass=dict(build_ext=CMakeBuild),
     zip_safe=False,
