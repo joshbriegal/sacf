@@ -1,3 +1,8 @@
 *~
+*.pyc
 /build-*
 .idea/
+/example/files/
+/example/Vedad/
+/example/processed
+/example/NG*/

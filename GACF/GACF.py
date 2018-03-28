@@ -12,6 +12,19 @@ WEIGHT_FUNCTIONS = {
     'fractional': Correlator.getFractionWeights
 }
 
+GACF_LOG_MESSAGE = ' ######      ###     ######  ######## \n' \
+                   '##    ##    ## ##   ##    ## ##       \n' \
+                   '##         ##   ##  ##       ##       \n' \
+                   '##   #### ##     ## ##       ######   \n' \
+                   '##    ##  ######### ##       ##       \n' \
+                   '##    ##  ##     ## ##    ## ##       \n' \
+                   ' ######   ##     ##  ######  ##    \n' \
+                   '------------------------------\n' \
+                   'Number of Data Points: {no_data}\n' \
+                   'Number of Lag Timesteps: {no_lag_points}\n' \
+                   'Lag Resolution: {lag_resolution}\n' \
+                   '------------------------------\n'
+
 
 def set_up_correlation(corr, max_lag=None, lag_resolution=None, alpha=None):
     """ No return type. Applies non-default values to correlator """
@@ -83,4 +96,4 @@ def find_correlation_from_lists(values, timeseries, errors=None, max_lag=None, l
 
     set_up_correlation(corr, max_lag, lag_resolution, alpha)
     find_correlation(corr, selection_function, weight_function)
-    return {'lag_timeseries': corr.lag_timeseries(), 'correlations': corr.correlations()}
+    return {'lag_timeseries': corr.lag_timeseries(), 'correlations': corr.correlations()}, corr
