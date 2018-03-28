@@ -93,7 +93,7 @@ def create_sampled_data():
 
 def get_data_from_file(filename):
     ds = DataStructure(filename)
-    return ds.timeseries(), ds.values()
+    return ds.timeseries(), ds.values(), ds.errors()
 
 
 def create_phase(time_series, period, epoch):
@@ -202,12 +202,16 @@ def normalise_data_by_spline(time_series, data, plot=False, filename=None, **kwa
     return norm_data
 
 
-def save_autocorrelation_plots(data_timeseries, data_values, correlation_timeseries, correlation_values,
-                               fft_periods, fft_data, fft_indexes, filename):
+def autocorrelation_plots(data_timeseries, data_values, correlation_timeseries, correlation_values,
+                          fft_periods, fft_data, fft_indexes, fig=None, axs=[], peaks=True, max_peak=None):
 
-    fig = plt.figure()
+    if fig is None:
+        fig = plt.figure()
     # plot input data
-    ax1 = fig.add_subplot(311)
+    if not axs:
+        ax1 = fig.add_subplot(311)
+    else:
+        ax1 = axs[0]
     # plt.subplot(311)
     ax1.scatter(data_timeseries, data_values, s=0.1)
     ax1.set_title('Data')
@@ -215,7 +219,10 @@ def save_autocorrelation_plots(data_timeseries, data_values, correlation_timeser
     ax1.set_ylabel('Signal')
 
     # plot autocorrelation
-    ax2 = fig.add_subplot(312)
+    if not axs:
+        ax2 = fig.add_subplot(312)
+    else:
+        ax2 = axs[1]
     # plt.subplot(312)
     ax2.plot(correlation_timeseries, correlation_values)
     ax2.set_title('Autocorrelation')
@@ -224,17 +231,51 @@ def save_autocorrelation_plots(data_timeseries, data_values, correlation_timeser
     ax2.set_xlim(xmin=0)
 
     # plot fourier transform
-
-    ax3 = fig.add_subplot(313)
+    if not axs:
+        ax3 = fig.add_subplot(313)
+    else:
+        ax3 = axs[2]
 
     ax3.plot(fft_periods, fft_data, '--')
     ax3.plot(fft_periods[fft_indexes], fft_data[fft_indexes], 'r+', ms=5, mew=2,
              label='{} peaks'.format(len(fft_indexes)))
-    ax3.legend()
+    if peaks:
+        ax3.legend()
+    if max_peak:
+        ax3.axhline(y=max_peak, lw=0.2, ls='--')
+        ax3.text(0, max_peak*1.2, 'threshold {}'.format(max_peak), fontsize=8)
+        ax3.set_ylim(0, max_peak*10)
+        ax3.set_xlim(xmax=50)
     ax3.set_title('FFT with peak detection')
     ax3.set_xlim(xmin=0)
 
     fig.tight_layout()
+
+    return fig, [ax1, ax2, ax3]
+
+
+def save_autocorrelation_plots(data_timeseries, data_values, correlation_timeseries, correlation_values,
+                               fft_periods, fft_data, fft_indexes, filename):
+
+    fig, _ = autocorrelation_plots(data_timeseries, data_values, correlation_timeseries, correlation_values,
+                                   fft_periods, fft_data, fft_indexes)
+
+    fig.savefig(filename + '/autocorrelation.pdf')
+
+    plt.close(fig)
+
+
+def save_autocorrelation_plots_multi(data_timeseries, data_values, correlation_timeseries, correlation_values,
+                                     fft_periods, fft_data, fft_indexes, filename, max_peak):
+    fig, axs = None, []
+    for i, data in enumerate(data_values):
+        if i == 0:
+            fig, axs = autocorrelation_plots(data_timeseries, data, correlation_timeseries, correlation_values[i],
+                                             fft_periods[i], fft_data[i], fft_indexes[i], peaks=False,
+                                             max_peak=max_peak)
+        else:
+            _, _ = autocorrelation_plots(data_timeseries, data, correlation_timeseries, correlation_values[i],
+                                             fft_periods[i], fft_data[i], fft_indexes[i], fig, axs, peaks=False)
 
     fig.savefig(filename + '/autocorrelation.pdf')
 
@@ -322,6 +363,23 @@ def confirm_period(periods, indexes, correlation_timeseries, correlation_data,
     return peaks_x
 
 
+def fourier_transform_and_peaks(correlations, lag_timeseries):
+
+    complex_ft = fft.rfft(correlations, n=len(correlations) * 2)
+    freqs = fft.rfftfreq(len(lag_timeseries) * 2, lag_timeseries[1] - lag_timeseries[0])
+
+    periods = 1 / freqs
+    ft = np.abs(complex_ft)
+
+    # Find peaks of FFT
+
+    indexes = peakutils.indexes(ft, thres=0.5,  # Fraction of largest peak
+                                min_dist=1  # Number of data points between
+                                )
+
+    return ft, periods, indexes
+
+
 def autocol_and_phase_folds(file, num_phase_plots=5, do_remove_transit=False, known_period=None, known_epoch=None,
                             logger=None):
     try:
@@ -343,7 +401,7 @@ def autocol_and_phase_folds(file, num_phase_plots=5, do_remove_transit=False, kn
         raise ValueError('No logger found')
 
     # get data from file
-    time_series, data = get_data_from_file(file)
+    time_series, data, _ = get_data_from_file(file)
 
     # time_series = np.array(time_series[:int(len(time_series)/2)])
     # data = np.array(data[:int(len(data)/2)])
@@ -364,18 +422,7 @@ def autocol_and_phase_folds(file, num_phase_plots=5, do_remove_transit=False, kn
     #
     # n = int(np.argmin(abs(np.array(correlations['lag_timeseries']) - 100.)))
 
-    complex_ft = fft.rfft(correlations['correlations'], n=len(correlations['correlations']) * 2)
-    freqs = fft.rfftfreq(len(correlations['lag_timeseries']) * 2, correlations['lag_timeseries'][1] -
-                         correlations['lag_timeseries'][0])
-
-    periods = 1 / freqs
-    ft = np.abs(complex_ft)
-
-    # Find peaks of FFT
-
-    indexes = peakutils.indexes(ft, thres=0.5 ,  # Fraction of largest peak
-                                min_dist=1  # Number of data points between
-                                )
+    ft, periods, indexes = fourier_transform_and_peaks(correlations['correlations'], correlations['lag_timeseries'])
 
     logger.info('periods before pruning: {}'.format([periods[index] for index in indexes]))
 
@@ -396,7 +443,7 @@ def autocol_and_phase_folds(file, num_phase_plots=5, do_remove_transit=False, kn
                                           correlations['lag_timeseries'],
                                           correlations['correlations'],
                                           fraction_around_period=0.5,
-                                          plot=True, filename=file_dir)
+                                          plot=False, filename=file_dir)
 
     if np.isnan(interpolated_periods).any():
         interpolated_periods = np.fromiter([periods[index] for index in indexes], dtype=float)
@@ -411,6 +458,115 @@ def autocol_and_phase_folds(file, num_phase_plots=5, do_remove_transit=False, kn
         if i >= num_phase_plots:
             break  # only plot best n periods
         save_phase_plot(time_series, period, 0., data, file_dir, peak_percentages[i])  # TODO: find epoch and fold
+
+
+def find_noise_level(file, no_samples=10, **kwargs):
+
+    try:
+        filename = re.compile(r'[/|\\](?P<file>[^\\^/.]+)\..+$').search(file).group('file')
+    except IndexError:
+        filename = file
+
+    file_dir = 'processed/' + filename + '/errors'
+
+    if not os.path.exists(file_dir):
+        os.makedirs(file_dir)
+
+    fh = logging.FileHandler(file_dir + '/peaks.log', 'w')
+    fh.setFormatter(logging.Formatter())
+    try:
+        logger = kwargs['logger']
+        logger.addHandler(fh)
+        logger.setLevel(logging.DEBUG)
+    except TypeError:
+        raise ValueError('No logger found')
+
+    # get data from file
+    time_series, data, errors = get_data_from_file(file)
+
+    median_data = np.median(data)
+    median_rms = np.median(errors)
+
+    # rms_over_data = median_rms / median_data
+
+    max_peak = None
+
+    generated_data = []
+    noise_sample = np.fromiter([np.random.normal(scale=rms) for rms in errors], dtype=float)
+    sine_period = 25  # days
+    sine_amplitude = 0.01  # depth
+    sine_amplitude_factor = 1.1
+
+    for i in range(no_samples):
+        generated_data.append(np.add(noise_sample,
+                                     np.add(1, i * sine_amplitude_factor * sine_amplitude *
+                                     np.sin(np.multiply(time_series, (2.0 * np.pi) / sine_period)))))
+
+    # time_series = np.array(time_series[:int(len(time_series)/2)])
+    # data = np.array(data[:int(len(data)/2)])
+
+    # data = normalise_data_by_spline(time_series, data, plot=True, filename=file_dir, s=len(time_series)/100)
+
+    # Find correlations
+    generated_correlations = []
+    for data in generated_data:
+        generated_correlations.append(find_correlation_from_lists(data, time_series))
+
+    # Take fourier transform of data
+
+    # # crop fourier transform (test)
+    #
+    # n = int(np.argmin(abs(np.array(correlations['lag_timeseries']) - 100.)))
+
+    generated_ft, generated_periods, generated_indexes, generated_interp_periods = [], [], [], []
+
+    for j, correlations in enumerate(generated_correlations):
+
+        # correlations['correlations'] = np.multiply(np.array(correlations['correlations']), rms_over_data)
+
+        ft, periods, indexes = fourier_transform_and_peaks(correlations['correlations'], correlations['lag_timeseries'])
+
+        logger.info('periods before pruning: {}'.format([periods[index] for index in indexes]))
+
+        indexes = [index for index in indexes if periods[index] > 1 and index != 1]  # prune short periods & last point
+
+        indexes = [index for index, _ in sorted(zip(indexes, [ft[index] for index in indexes]),
+                                                key=lambda pair: pair[1], reverse=True)]  # sort peaks by amplitude
+
+        peak_percentages = [ft[index] / ft[indexes[0]] for index in indexes]
+
+        logger.info('peak periods: {}'.format([periods[index] for index in indexes]))
+        logger.info('peak amplitudes: {}'.format([ft[index] for index in indexes]))
+        logger.info('peak percentages: {}\n\n'.format([str(p * 100) + '%' for p in peak_percentages]))
+        if j == 0:
+            try:
+                max_peak = max(max_peak, max([ft[index] for index in indexes]))
+            except ValueError:
+                max_peak = None
+
+    # don't interpolate periods to save time
+
+        generated_ft.append(ft)
+        generated_periods.append(periods)
+        generated_indexes.append(indexes)
+
+    # save plots
+    save_autocorrelation_plots_multi(time_series, generated_data, generated_correlations[0]['lag_timeseries'],
+                                     [generated_correlations[i]['correlations']
+                                      for i in range(len(generated_correlations))],
+                                     generated_periods, generated_ft, generated_indexes, file_dir, max_peak)
+
+    return max_peak
+
+
+def pool_map_errors(file):
+    try:
+        return find_noise_level(file, logger=logging.getLogger(file), no_samples=3)
+    except Exception as e:
+        print 'Caught Exception in child procees for file {}'.format(file)
+        traceback.print_exc()
+        print()
+        raise e
 
 
 def pool_map(file):
@@ -439,24 +595,12 @@ if __name__ == '__main__':
 
     # filter files
     # files = [file_location + f for f in files if 'tbin' in f]
-    files = ['/Users/joshbriegal/GitHub/GACF/example/files/NG0522-2518_025974_LC_tbin=10min.dat']
+    files = ['/Users/joshbriegal/GitHub/GACF/example/files/0409-1941_000845_LC_tbin=10min.dat']
     pool = mp.Pool(processes=mp.cpu_count())
 
-    pool.map(pool_map, files)
-    # except Exception as e:
-    #     logger.warning('Failed for {} \n Exception: {}'.format(file, e))
+    pool.map(pool_map_errors, files)
 
-    #
-    # for file in files:
-    #     # if file == '/Users/joshbriegal/GitHub/GACF/example/files/NG0522-2518_025974_LC_tbin=10min.dat':
-    #     # if file == '/Users/joshbriegal/GitHub/GACF/example/files/NG1416-3056_043256_LC_tbin=10min.dat':
-    #     logger.info('\n~~~~~')
-    #     logger.info('Running for file {}'.format(file))
-    #     logger.info('~~~~~\n')
-    #     try:
-    #         autocol_and_phase_folds(file, logger=logging.getLogger(file))
-    #         # autocol_and_phase_folds(file, logger=logging.getLogger(file), do_remove_transit=True,
-    #         #                         known_period=4.511312922, known_epoch=2457759.12161-2456658.5)
-    #     except Exception as e:
-    #         logger.warning('Failed for {} \n Exception: {}'.format(file, e))
+
+
+
 

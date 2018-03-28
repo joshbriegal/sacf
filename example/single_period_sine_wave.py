@@ -119,13 +119,15 @@ def confirm_period(periods, indexes, correlation_timeseries, correlation_data, p
 
 if __name__ == '__main__':
 
+    import time
+
     time_period = 2.5
     phase = None
     epoch = 0
 
     # time_series, data = create_regular_sine(time_period, phase=phase)
     # time_series, data = create_random_sine(time_period, phase=phase)
-    time_series, data = create_random_gappy_sine(time_period, phase=phase)
+    time_series, data = create_random_gappy_sine(time_period, phase=phase, n_values=600000)
 
     plt.subplot(311)
     plt.scatter(time_series, data, s=0.1)
@@ -133,9 +135,14 @@ if __name__ == '__main__':
     plt.xlabel('time (days)')
     plt.ylabel('output')
 
-    correlations = find_correlation_from_lists(data, time_series, max_lag=30)
+    start = time.time()
+    correlations = find_correlation_from_lists(data, time_series,
+                                               lag_resolution=1./24./12.)
+    end = time.time()
+    print 'Time to calculate correlations {} seconds for {} data points'\
+        .format(end-start, len(time_series))
     # correlations = find_correlation_from_file(filename, max_lag=50)
-
+    start = time.time()
     complex_ft = fft.rfft(correlations['correlations'])
     freqs = fft.rfftfreq(len(correlations['lag_timeseries']), correlations['lag_timeseries'][1] -
                          correlations['lag_timeseries'][0])
@@ -200,4 +207,7 @@ if __name__ == '__main__':
     plt.scatter(phase_fold_correct, data, s=0.1)
     plt.title('Data phase folded on correct period ({} days)'.format(time_period))
     plt.show()
+    end = time.time()
+
+    print 'Time to do the rest of the stuff {} seconds'.format(end-start)
 
