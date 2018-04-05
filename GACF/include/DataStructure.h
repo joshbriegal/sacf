@@ -8,6 +8,14 @@
 #include <string>
 #include <vector>
 
+class EmptyDataStructureException: public std::exception{
+    public: virtual const char* what() const throw();
+};
+
+class BadDataFileReadException: public std::exception{
+    public: virtual const char* what() const throw();
+};
+
 class DataStructure{
     /*
      * Data and data-manipulation functions stored here. Can be initialised with or without X errors and from a file

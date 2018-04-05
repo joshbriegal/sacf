@@ -20,4 +20,6 @@ PYBIND11_MODULE(datastructure, ds) {
         .def_property_readonly("median_time", &DataStructure::median_time)
         .def_property_readonly("max_time", &DataStructure::max_time)
         ;
+    py::register_exception<EmptyDataStructureException>(ds, "EmptyDataStructureException");
+    py::register_exception<BadDataFileReadException>(ds, "BadDataFileReadException");
 }

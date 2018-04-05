@@ -66,7 +66,7 @@ class CMakeBuild(build_ext):
 
 setup(
     name='GACF',
-    version='0.0.1',
+    version='0.0.2',
     author='Joshua Briegal',
     author_email='jtb34@cam.ac.uk',
     description='A generalisation of the autocorrelation function, for non-uniformly sampled timeseries data',
@@ -74,6 +74,7 @@ setup(
     packages=['GACF'],
     ext_modules=[CMakeExtension('GACF.correlator', 'GACF'), CMakeExtension('GACF.datastructure', 'GACF')],
     cmdclass=dict(build_ext=CMakeBuild),
+    test_suite='GACF.tests',
     zip_safe=False,
     install_requires=['tqdm']
 )
