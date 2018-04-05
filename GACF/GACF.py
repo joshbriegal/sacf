@@ -75,11 +75,11 @@ def find_correlation_from_file(filename, max_lag=None, lag_resolution=None, sele
     return {'lag_timeseries': corr.lag_timeseries(), 'correlations': corr.correlations()}
 
 
-def find_correlation_from_lists(values, timeseries, errors=None, max_lag=None, lag_resolution=None,
+def find_correlation_from_lists(timeseries, values, errors=None, max_lag=None, lag_resolution=None,
                                 selection_function='natural', weight_function='gaussian', alpha=None):
     """
-    :param values: list of X values
     :param timeseries: list of time values
+    :param values: list of X values
     :param errors: (optional) list of errors on X values
     :param max_lag: max lag in days
     :param lag_resolution: lag resolution in days
@@ -89,9 +89,9 @@ def find_correlation_from_lists(values, timeseries, errors=None, max_lag=None, l
     :return: { 'lag_timeseries':[], 'correlations':[] }
     """
     if errors is None:
-        ds = DataStructure(values, timeseries)
+        ds = DataStructure(timeseries, values)
     else:
-        ds = DataStructure(values, timeseries, errors)
+        ds = DataStructure(timeseries, values, errors)
     corr = Correlator(ds)
 
     set_up_correlation(corr, max_lag, lag_resolution, alpha)
