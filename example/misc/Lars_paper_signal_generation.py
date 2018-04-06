@@ -30,9 +30,9 @@ def separate_plots():
     random_sine = sine(random_timeseries, period=PERIOD_1, amplitude=AMPLITUDE_1, phase=PHASE_1)
     irregular_sine = sine(irregular_timeseries, period=PERIOD_1, amplitude=AMPLITUDE_1, phase=PHASE_1)
 
-    regular_sin_correlation = find_correlation_from_lists(regular_sine, regular_timeseries)
-    random_sin_correlation = find_correlation_from_lists(random_sine, random_timeseries)
-    irregular_sin_correlation = find_correlation_from_lists(irregular_sine, irregular_timeseries)
+    regular_sin_correlation, _ = find_correlation_from_lists(regular_sine, regular_timeseries)
+    random_sin_correlation, _ = find_correlation_from_lists(random_sine, random_timeseries)
+    irregular_sin_correlation, _ = find_correlation_from_lists(irregular_sine, irregular_timeseries)
 
     # plotting
 
@@ -128,14 +128,14 @@ def same_plot_with_offset():
     regular_sin_sum = regular_sine + regular_sine2
     random_sin_sum = random_sine + random_sine2
     irregular_sin_sum = irregular_sine + irregular_sine2
-    
-    regular_sin_correlation = find_correlation_from_lists(regular_sine, regular_timeseries)
-    random_sin_correlation = find_correlation_from_lists(random_sine, random_timeseries)
-    irregular_sin_correlation = find_correlation_from_lists(irregular_sine, irregular_timeseries)
 
-    regular_sin_sum_correlation = find_correlation_from_lists(regular_sin_sum, regular_timeseries)
-    random_sin_sum_correlation = find_correlation_from_lists(random_sin_sum, random_timeseries)
-    irregular_sin_sum_correlation = find_correlation_from_lists(irregular_sin_sum, irregular_timeseries)
+    regular_sin_correlation, _ = find_correlation_from_lists(regular_sine, regular_timeseries)
+    random_sin_correlation, _ = find_correlation_from_lists(random_sine, random_timeseries)
+    irregular_sin_correlation, _ = find_correlation_from_lists(irregular_sine, irregular_timeseries)
+
+    regular_sin_sum_correlation, _ = find_correlation_from_lists(regular_sin_sum, regular_timeseries)
+    random_sin_sum_correlation, _ = find_correlation_from_lists(random_sin_sum, random_timeseries)
+    irregular_sin_sum_correlation, _ = find_correlation_from_lists(irregular_sin_sum, irregular_timeseries)
 
     ####### SINGLE SIN FIGURE PLOT ######
 
@@ -237,11 +237,14 @@ def same_plot_with_offset():
         handle.set_sizes([6.0])
 
     plt.show()
+
+    single_sine_fig.savefig('single sine wave of {} day period.pdf'.format(PERIOD_1))
+    two_sine_fig.savefig('two sine waves of {} day and {} day period.pdf'.format(PERIOD_1, PERIOD_2))
     
 
 # periods in days
 PERIOD_1 = 17.8
-PERIOD_2 = 37.2
+PERIOD_2 = 8.5
 
 AMPLITUDE_1 = 1.0
 AMPLITUDE_2 = 1.0
@@ -249,9 +252,171 @@ AMPLITUDE_2 = 1.0
 PHASE_1 = 0.0
 PHASE_2 = 0.0
 
-if __name__ == '__main__':
+from george.kernels import ExpSine2Kernel, ExpSquaredKernel
+import george
 
-    same_plot_with_offset()
+
+class StarSpotModel(object):
+
+    def __init__(self, theta, is_exp=False):
+        if is_exp:
+            theta = np.exp(theta)
+        self.A = theta[0]
+        self.l = theta[1]
+        self.G = theta[2]
+        self.sigma = theta[3]
+        self.P = theta[4]
+        self.gp = None
+
+    def gp_kernel(self):
+        return self.A * ExpSquaredKernel(self.l) * ExpSine2Kernel(self.G, self.P)
+
+    def gen_gp(self):
+
+        k = self.gp_kernel()
+        gp = george.GP(k, solver=george.HODLRSolver, white_noise=self.sigma)
+
+        return gp
+
+    def gp_sample(self, timeseries):
+
+        if self.gp is None:
+            self.gp = self.gen_gp()
+
+        sample = self.gp.sample(timeseries)
+
+        return sample
+
+
+def star_spot_gp_plot(same_series=True, from_pickle=False, overlay_plots=True):
+    import pickle
+    PICKLE_FILE = "GP_Data.pkl"
+
+    theta = [1, 10, 1, 0.01, PERIOD_2]  # [A, l, G, sigma, P]
+
+    regular_timeseries = import_timeseries_from_file('regular_sampling.txt')
+    random_timeseries = import_timeseries_from_file('random_sampling.txt')
+    irregular_timeseries = import_timeseries_from_file('irregular_sampling.txt')
+
+    ss = StarSpotModel(theta)
+
+    if from_pickle:
+        try:
+            regular_timeseries_sample = pickle.load(file(PICKLE_FILE, 'r'))
+            print 'Loaded from file {}'.format(PICKLE_FILE)
+        except IOError:
+            from_pickle = False
+            print 'Unable to load from file {}'.format(PICKLE_FILE)
+
+    if not from_pickle:
+        regular_timeseries_sample = ss.gp_sample(regular_timeseries)
+        pickle.dump(regular_timeseries_sample, file(PICKLE_FILE, 'w'))
+        print 'Dumped to pickle file {}'.format(PICKLE_FILE)
+
+    if same_series:
+        from scipy.interpolate import interp1d
+        f = interp1d(regular_timeseries, regular_timeseries_sample, bounds_error=False, fill_value="extrapolate")
+        random_timeseries_sample = f(random_timeseries)
+        irregular_timeseries_sample = f(irregular_timeseries)
+    else:
+        random_timeseries_sample = ss.gp_sample(random_timeseries)
+        irregular_timeseries_sample = ss.gp_sample(irregular_timeseries)
+
+    # calculate autocorrelations
+
+    regular_timeseries_correlations, _ = find_correlation_from_lists(regular_timeseries_sample, regular_timeseries)
+    random_timeseries_correlations, _ = find_correlation_from_lists(random_timeseries_sample, random_timeseries)
+    irregular_timeseries_correlations, _ = find_correlation_from_lists(irregular_timeseries_sample,
+                                                                       irregular_timeseries)
+
+    if overlay_plots:
+        fig, ax = plt.subplots(2, 1, figsize=(11.7, 8.3))
+        data_ax = ax[0]
+        cor_ax = ax[1]
+
+        OFFSET = (max(regular_timeseries_sample) - min(regular_timeseries_sample))
+
+        data_ax.scatter(regular_timeseries, np.add(regular_timeseries_sample, OFFSET), s=0.1,
+                        label='Regular Sampling')
+        data_ax.scatter(random_timeseries, random_timeseries_sample, s=0.1, label='Random Sampling')
+        data_ax.scatter(irregular_timeseries, np.subtract(irregular_timeseries_sample, OFFSET),
+                        s=0.1, label='Irregular Sampling')
+
+        data_ax.set_title('Regular Sampling, Gaussian Process (theta: {})'.format(theta))
+
+        data_ax.set_xlabel('Time (days)')
+        data_ax.set_ylabel('Signal')
+        cor_ax.set_xlabel('Lag (days)')
+        cor_ax.set_ylabel('Autocorrelation')
+
+        cor_ax.scatter(regular_timeseries_correlations['lag_timeseries'],
+                       regular_timeseries_correlations['correlations'], s=0.1, label='Regular Sampling')
+        cor_ax.scatter(random_timeseries_correlations['lag_timeseries'],
+                       random_timeseries_correlations['correlations'], s=0.1, label='Random Sampling')
+        cor_ax.scatter(irregular_timeseries_correlations['lag_timeseries'],
+                       irregular_timeseries_correlations['correlations'], s=0.1, label='Irregular Sampling')
+
+        cor_ax.axhline(0.0, lw=0.1, c='k')
+
+        cor_ax.set_ylim([-1.0, 1.0])
+
+        data_lgnd = data_ax.legend(scatterpoints=1, loc=1)
+        col_lgnd = cor_ax.legend(scatterpoints=1, loc=1)
+
+        for handle in data_lgnd.legendHandles:
+            handle.set_sizes([6.0])
+
+        for handle in col_lgnd.legendHandles:
+            handle.set_sizes([6.0])
+
+        fig.tight_layout()
+
+        plt.show()
+
+        fig.savefig('Gaussian Process driven signal.pdf')
+
+    else:
+        fig, ax = plt.subplots(3, 1)
+        regular_ax = ax[0]
+        random_ax = ax[1]
+        irregular_ax = ax[2]
+
+        regular_ax.scatter(regular_timeseries, regular_timeseries_sample, s=0.1)
+        random_ax.scatter(random_timeseries, random_timeseries_sample, s=0.1)
+        irregular_ax.scatter(irregular_timeseries, irregular_timeseries_sample, s=0.1)
+
+        regular_ax.set_title('Regular Sampling, Gaussian Process (theta: {})'.format(theta))
+        random_ax.set_title('Random Sampling, Gaussian Process (theta: {})'.format(theta))
+        irregular_ax.set_title('Irregular Sampling, Gaussian Process (theta: {})'.format(theta))
+
+        fig.tight_layout()
+
+        plt.show()
+
+        fig2, axs = plt.subplots(3, 1)
+        regular_ax2 = axs[0]
+        random_ax2 = axs[1]
+        irregular_ax2 = axs[2]
+
+        regular_ax2.scatter(regular_timeseries_correlations['lag_timeseries'],
+                            regular_timeseries_correlations['correlations'], s=0.1)
+        random_ax2.scatter(random_timeseries_correlations['lag_timeseries'],
+                           random_timeseries_correlations['correlations'], s=0.1)
+        irregular_ax2.scatter(irregular_timeseries_correlations['lag_timeseries'],
+                              irregular_timeseries_correlations['correlations'], s=0.1)
+
+        regular_ax2.set_title('Regular Sampling, Autocorrelation')
+        random_ax2.set_title('Random Sampling, Autocorrelation')
+        irregular_ax2.set_title('Irregular Sampling, Autocorrelation')
+
+        fig2.tight_layout()
+
+        plt.show()
+
+
+if __name__ == '__main__':
+    # same_plot_with_offset()
+    star_spot_gp_plot(from_pickle=True)
 
     # separate lines more to show scale better
     # instead of legend just label lines
