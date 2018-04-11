@@ -95,7 +95,13 @@ def create_sampled_data():
 
 def get_data_from_file(filename):
     ds = DataStructure(filename)
-    return ds.timeseries(), ds.values(), ds.errors()
+    if ds.N_datasets == 1:
+        data = ds.data()[0]
+        errors = ds.errors()[0]
+    else:
+        data = ds.data()
+        errors = ds.errors()
+    return ds.timeseries(), data, errors
 
 
 def create_phase(time_series, period, epoch):
@@ -205,7 +211,8 @@ def normalise_data_by_spline(time_series, data, plot=False, filename=None, **kwa
 
 
 def autocorrelation_plots(data_timeseries, data_values, correlation_timeseries, correlation_values,
-                          fft_periods, fft_data, fft_indexes, fig=None, axs=[], peaks=True, max_peak=None):
+                          fft_periods, fft_data, fft_indexes, fig=None, axs=[], peaks=True, max_peak=None,
+                          running_max_peak=None):
 
     if fig is None:
         fig = plt.figure()
@@ -261,6 +268,8 @@ def autocorrelation_plots(data_timeseries, data_values, correlation_timeseries, 
     if max_peak:
         ax3.axhline(y=max_peak, lw=0.2, ls='--')
         ax3.text(min(fft_periods), max_peak*1.2, 'threshold {}'.format(max_peak), fontsize=8)
+    if running_max_peak:
+        ax3.fill_between(fft_periods, 0, running_max_peak, alpha=0.5)
     ax3.set_title('FFT with peak detection')
     ax3.set_xlim(xmin=0)
 
@@ -270,10 +279,12 @@ def autocorrelation_plots(data_timeseries, data_values, correlation_timeseries, 
 
 
 def save_autocorrelation_plots(data_timeseries, data_values, correlation_timeseries, correlation_values,
-                               fft_periods, fft_data, fft_indexes, filename, max_peak=None, zoom_plots=True):
+                               fft_periods, fft_data, fft_indexes, filename, max_peak=None, zoom_plots=True,
+                               running_max_peak=None):
 
     fig, axs = autocorrelation_plots(data_timeseries, data_values, correlation_timeseries, correlation_values,
-                                     fft_periods, fft_data, fft_indexes, max_peak=max_peak)
+                                     fft_periods, fft_data, fft_indexes, max_peak=max_peak,
+                                     running_max_peak=running_max_peak)
 
     fig.savefig(filename + '/autocorrelation.pdf')
 
@@ -295,6 +306,8 @@ def save_autocorrelation_plots(data_timeseries, data_values, correlation_timeser
         if max_peak:
             ft_ax.axhline(y=max_peak, lw=0.2, ls='--')
             ft_ax.text(min(fft_periods), max_peak*1.2, 'threshold {}'.format(max_peak), fontsize=8,)
+        if running_max_peak:
+            ft_ax.fill_between(fft_periods, 0, running_max_peak, alpha=0.5)
         ft_ax.set_xlabel('Period (days)')
         ft_ax.set_title('FFT with peak detection')
         ft_ax.set_xlim(xmin=0)
@@ -515,7 +528,7 @@ def create_fourier_transform_animation(correlation_timeseries, correlation_data,
 
 def autocol_and_phase_folds(file, num_phase_plots=5, do_remove_transit=False, known_period=None, known_epoch=None,
                             logger=None, create_ft_animation=False, noise_threshold=None, interpolate_periods=False,
-                            **kwargs):
+                            running_noise_threshold=None, **kwargs):
     try:
         filename = re.compile(r'[/|\\](?P<file>[^\\^/.]+)\..+$').search(file).group('file')
     except IndexError:
@@ -550,7 +563,7 @@ def autocol_and_phase_folds(file, num_phase_plots=5, do_remove_transit=False, kn
     # Find correlations
     max_lag = kwargs['max_lag'] if 'max_lag' in kwargs else None
     lag_resolution = kwargs['lag_resolution'] if 'lag_resolution' in kwargs else None
-    correlations, corr = find_correlation_from_lists(data, time_series, max_lag=max_lag, lag_resolution=lag_resolution)
+    correlations, corr = find_correlation_from_lists(time_series, data, max_lag=max_lag, lag_resolution=lag_resolution)
 
     logger.info(GACF_LOG_MESSAGE.format(no_data=len(time_series),
                                         no_lag_points=len(correlations['lag_timeseries']),
@@ -566,8 +579,13 @@ def autocol_and_phase_folds(file, num_phase_plots=5, do_remove_transit=False, kn
     logger.info('periods before pruning: {}'.format([periods[index] for index in indexes]))
 
     indexes = [index for index in indexes if periods[index] > 1 and index != 1]  # prune short periods & last point
+    indexes = [index for index in indexes if periods[index] < 0.5 * (time_series[-1] - time_series[0])]
+    # prune periods more than half the time series
     if noise_threshold:
         indexes = [index for index in indexes if ft[index] > noise_threshold]  # prune peaks below noise if given
+    if running_noise_threshold:
+        # prune peaks below running noise if given
+        indexes = [index for index in indexes if ft[index] > running_noise_threshold[index]]
 
     indexes = [index for index, _ in sorted(zip(indexes, [ft[index] for index in indexes]),
                                             key=lambda pair: pair[1], reverse=True)]  # sort peaks by amplitude
@@ -595,8 +613,12 @@ def autocol_and_phase_folds(file, num_phase_plots=5, do_remove_transit=False, kn
         interpolated_periods = np.fromiter([periods[index] for index in indexes], dtype=float)
 
     # save plots
-    save_autocorrelation_plots(time_series, data, correlations['lag_timeseries'], correlations['correlations'],
-                               periods, ft, indexes, file_dir, max_peak=noise_threshold)
+    if running_noise_threshold is not None:
+        save_autocorrelation_plots(time_series, data, correlations['lag_timeseries'], correlations['correlations'],
+                                   periods, ft, indexes, file_dir, running_max_peak=running_noise_threshold)
+    else:
+        save_autocorrelation_plots(time_series, data, correlations['lag_timeseries'], correlations['correlations'],
+                                   periods, ft, indexes, file_dir, max_peak=noise_threshold)
 
     for i, period in enumerate(interpolated_periods):#[periods[index] for index in indexes]):
         if i >= num_phase_plots:
@@ -642,7 +664,7 @@ def find_noise_level(file, no_samples=10, **kwargs):
     generated_data = np.empty(shape=(no_samples, len(time_series)))
 
     for i in range(no_samples):
-        generated_data[i] = np.fromiter([np.random.normal(scale=rms) for rms in errors], dtype=float)
+        generated_data[i] = np.array([np.random.normal(scale=rms) for rms in errors], dtype=float)
 
     # time_series = np.array(time_series[:int(len(time_series)/2)])
     # data = np.array(data[:int(len(data)/2)])
@@ -650,13 +672,17 @@ def find_noise_level(file, no_samples=10, **kwargs):
     # data = normalise_data_by_spline(time_series, data, plot=True, filename=file_dir, s=len(time_series)/100)
 
     # Find correlations
-    first_correlation, _ = find_correlation_from_lists(data, time_series)
-    lag_timeseries = first_correlation['lag_timeseries']
+    # first_correlation, _ = find_correlation_from_lists(data, time_series)
+    # lag_timeseries = first_correlation['lag_timeseries']
+    #
+    # generated_correlations = np.empty(shape=(no_samples, len(lag_timeseries)))
 
-    generated_correlations = np.empty(shape=(no_samples, len(lag_timeseries)))
+    generated_correlations, _ = find_correlation_from_lists(time_series, generated_data)
+    lag_timeseries = generated_correlations['lag_timeseries']
+    generated_correlations = np.array(generated_correlations['correlations'])
 
-    for i, data in enumerate(tqdm(generated_data, total=no_samples, desc='Calculating Noise Correlations')):
-        generated_correlations[i] = find_correlation_from_lists(data, time_series)[0]['correlations']
+    # for i, data in enumerate(tqdm(generated_data, total=no_samples, desc='Calculating Noise Correlations')):
+    #     generated_correlations[i] = find_correlation_from_lists(data, time_series)[0]['correlations']
 
     # Take fourier transform of data
 
@@ -735,8 +761,9 @@ def find_noise_level(file, no_samples=10, **kwargs):
                                gen_ft_dict, generated_indexes, file_dir, max_peak)
 
     logger.info('Noise Threshold: {}'.format(max_peak))
+    logger.info('Running: {}'.format(gen_ft_dict['max']))
 
-    return max_peak
+    return max_peak, gen_ft_dict['max']
 
 
 def pool_map_errors(file):
@@ -752,7 +779,7 @@ def pool_map_errors(file):
 def pool_map((file, noise_threshold)):
     try:
         return autocol_and_phase_folds(file, logger=logging.getLogger(file), create_ft_animation=True,
-                                       noise_threshold=noise_threshold)
+                                       running_noise_threshold=noise_threshold)
     except Exception as e:
         import traceback
         print 'Caught Exception in child process for file {}'.format(file)
@@ -768,26 +795,30 @@ def get_threshold_from_file(filename):
     except IndexError:
         pass
 
+    noise_threshold, noise_thresholds = None, None
+
     threshold = re.compile(r'^Noise Threshold: (?P<threshold>\d+\.\d+)')
+    thresholds = re.compile(r'Running: \[(?P<values>.*?)\]')
+
     try:
         with open('processed/' + filename + '/errors/peaks.log') as f:
             l = f.readlines()
             for line in l:
                 match = threshold.search(line)
+                match2 = thresholds.search(line)
                 try:
-                    noise_threshold = float(match.group('threshold'))
+                    if match is not None:
+                        noise_threshold = float(match.group('threshold'))
+                    if match2 is not None:
+                        noise_thresholds = [float(i) for i in match2.group('values').split(',')]
                 except AttributeError:
                     continue
-                else:
-                    return noise_threshold
+        return noise_threshold, noise_thresholds
+
     except IOError:
-        return None
+        return None, None
     except (TypeError, ValueError):
-        return None
-    return None
-
-
-
+        return None, None
 
 
 if __name__ == '__main__':
@@ -806,18 +837,20 @@ if __name__ == '__main__':
     files = os.listdir(file_location)
 
     # filter files
-    files = [file_location + f for f in files if ('tbin' in f and 'NG0612-2518' in f)]
-    logger.info('Running on files: \n{}'.format('\n'.join(files)))
+    files = [file_location + f for f in files if ('tbin' in f and 'NG1444' in f)]
+    # logger.info('Running on files: \n{}'.format('\n'.join(files)))
     # files = ['/Users/joshbriegal/GitHub/GACF/example/files/NG0612-2518_044284_LC_tbin=10min.dat']
     pool = mp.Pool(processes=mp.cpu_count())
 
     # noise_thresholds = [None for i in range(len(files))]
-    # noise_thresholds = pool.map(pool_map_errors, files)
-    noise_thresholds = [get_threshold_from_file(f) for f in files]
+    noise_thresholds = pool.map(pool_map_errors, files)
+    # noise_thresholds = [get_threshold_from_file(f) for f in files]
+    running_noise_thresholds = [n[1] for n in noise_thresholds]
+    noise_thresholds = [n[0] for n in noise_thresholds]
     logger.info('Noise Thresholds: {}'.format(noise_thresholds))
     # noise_thresholds = [10.0594786394]
 
-    pool.map(pool_map, zip(files, noise_thresholds))
+    pool.map(pool_map, zip(files, running_noise_thresholds))
     # except Exception as e:
     #     logger.warning('Failed for {} \n Exception: {}'.format(file, e))
 

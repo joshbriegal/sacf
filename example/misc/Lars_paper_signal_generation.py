@@ -292,7 +292,7 @@ def star_spot_gp_plot(same_series=True, from_pickle=False, overlay_plots=True):
     import pickle
     PICKLE_FILE = "GP_Data.pkl"
 
-    theta = [1, 10, 1, 0.01, PERIOD_2]  # [A, l, G, sigma, P]
+    theta = [1, PERIOD_2 * 10, 1, 0.01, PERIOD_2]  # [A, l, G, sigma, P]
 
     regular_timeseries = import_timeseries_from_file('regular_sampling.txt')
     random_timeseries = import_timeseries_from_file('random_sampling.txt')
@@ -416,7 +416,7 @@ def star_spot_gp_plot(same_series=True, from_pickle=False, overlay_plots=True):
 
 if __name__ == '__main__':
     # same_plot_with_offset()
-    star_spot_gp_plot(from_pickle=True)
+    star_spot_gp_plot(from_pickle=False)
 
     # separate lines more to show scale better
     # instead of legend just label lines
