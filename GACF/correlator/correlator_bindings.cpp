@@ -9,7 +9,7 @@ namespace py = pybind11;
 PYBIND11_MODULE(correlator, c) {
 
     py::class_<CorrelationIterator>(c, "CorrelationIterator")
-        .def(py::init<double>())
+        .def(py::init<double, double>())
         .def_readonly("correlation", &CorrelationIterator::correlation)
         .def_readwrite("k", &CorrelationIterator::k)
         .def_readonly("shifted_timeseries", &CorrelationIterator::shifted_timeseries)
@@ -37,6 +37,8 @@ PYBIND11_MODULE(correlator, c) {
         .def_property("max_lag", &Correlator::getMaxLag, &Correlator::setMaxLag)
         .def_property("lag_resolution", &Correlator::getLagResolution, &Correlator::setLagResolution)
         .def_property("alpha", &Correlator::getAlpha, &Correlator::setAlpha)
+        .def_property_readonly("data_length", &Correlator::getDataLength)
+        .def_property_readonly("num_data", &Correlator::getNumData)
         ;
 
 }

@@ -126,9 +126,14 @@ class TestDataStructure(unittest.TestCase):
 
     # method & property tests
 
-    def test_values(self):
+    def test_data(self):
         ds = GACF.datastructure.DataStructure(TestDataStructure.integer_list, TestDataStructure.integer_list2)
-        self.assertEqual(TestDataStructure.integer_list2, ds.values())
+        self.assertEqual(TestDataStructure.integer_list2, ds.data()[0])
+
+    def test_data_2d(self):
+        ds = GACF.datastructure.DataStructure(TestDataStructure.integer_list,
+                                              [TestDataStructure.integer_list2, TestDataStructure.integer_list])
+        self.assertEqual([TestDataStructure.integer_list2, TestDataStructure.integer_list], ds.data())
 
     def test_timeseries(self):
         ds = GACF.datastructure.DataStructure(TestDataStructure.integer_list2, TestDataStructure.integer_list)
@@ -141,25 +146,25 @@ class TestDataStructure(unittest.TestCase):
     def test_errors(self):
         ds = GACF.datastructure.DataStructure(TestDataStructure.integer_list, TestDataStructure.integer_list,
                                               TestDataStructure.integer_list2)
-        self.assertEqual(TestDataStructure.integer_list2, ds.errors())
+        self.assertEqual(TestDataStructure.integer_list2, ds.errors()[0])
 
-    def test_normalised_values(self):
+    def test_normalised_data(self):
         ds = GACF.datastructure.DataStructure(TestDataStructure.integer_list, TestDataStructure.integer_list2)
         self.assertEqual([x - TestDataStructure.integer_list2_mean for x in TestDataStructure.integer_list2],
-                         ds.normalised_values())
+                         ds.normalised_data()[0])
 
     def test_normalised_timeseries(self):
         ds = GACF.datastructure.DataStructure(TestDataStructure.integer_list2, TestDataStructure.integer_list)
         self.assertEqual(TestDataStructure.integer_list, ds.normalised_timeseries())
 
-    def test_mean_X(self):
+    def test_mean_data(self):
         ds = GACF.datastructure.DataStructure(TestDataStructure.integer_list, TestDataStructure.integer_list2)
-        self.assertEqual(TestDataStructure.integer_list2_mean, ds.mean_X)
+        self.assertEqual(TestDataStructure.integer_list2_mean, ds.mean_data[0])
 
-    def test_mean_X_nan(self):
+    def test_mean_data_nan(self):
         ds = GACF.datastructure.DataStructure(TestDataStructure.integer_list,
                                               TestDataStructure.numpy_float_array_with_nan)
-        self.assertEqual(TestDataStructure.float_list_mean, ds.mean_X)
+        self.assertEqual(TestDataStructure.float_list_mean, ds.mean_data[0])
 
     def test_median_time(self):
         ds = GACF.datastructure.DataStructure(TestDataStructure.float_list,
@@ -175,6 +180,67 @@ class TestDataStructure(unittest.TestCase):
         ds = GACF.datastructure.DataStructure(TestDataStructure.float_list,
                                               TestDataStructure.integer_list)
         self.assertEqual(TestDataStructure.float_list[-1], ds.max_time)
+
+
+class TestCorrelator(unittest.TestCase):
+
+    def setUp(self):
+        self.timestamps1 = [0, 1, 2, 3, 4]
+        self.timestamps1_median = 2
+        self.data1 = [0, 1, 0, -1, 0]
+        self.data2 = [0, 1, 2, 1, np.nan]
+        self.ds1 = GACF.datastructure.DataStructure(self.timestamps1, self.data1)
+        self.ds2 = GACF.datastructure.DataStructure(self.timestamps1, [self.data1, self.data2])
+        self.simple_correlation_solution = {'lag_timeseries': [0., 1., 2., 3., 4.],
+                                            'correlations': [1.0, 0.0, -0.5, 0.0, 0.0]}
+        self.two_correlation_solution = {'lag_timeseries': [0., 1., 2., 3., 4.],
+                                         'correlations': [[1.0, 0.0, -0.5, 0.0, 0.0],
+                                                          [1.0, 0.0, -0.5, 0.0, 0.0]]}
+
+    def test_setup_correlator(self):
+        corr = GACF.correlator.Correlator(self.ds1)
+
+    def test_setup_correlationiterator(self):
+        cor_it = GACF.correlator.CorrelationIterator(1, 1)
+
+    def test_default_max_lag(self):
+        corr = GACF.correlator.Correlator(self.ds1)
+        self.assertEqual(self.timestamps1[-1], corr.max_lag)
+
+    def test_alter_max_lag(self):
+        max_lag = 100
+        corr = GACF.correlator.Correlator(self.ds1)
+        corr.max_lag = max_lag
+        self.assertEqual(max_lag, corr.max_lag)
+
+    def test_default_lag_resolution(self):
+        corr = GACF.correlator.Correlator(self.ds1)
+        self.assertEqual(float(self.timestamps1[-1]) / float(len(self.timestamps1)), corr.lag_resolution)
+
+    def test_alter_lag_resolution(self):
+        lag_res = 100
+        corr = GACF.correlator.Correlator(self.ds1)
+        corr.lag_resolution = 100
+        self.assertEqual(lag_res, corr.lag_resolution)
+
+    def test_default_alpha(self):
+        corr = GACF.correlator.Correlator(self.ds1)
+        self.assertEqual(self.timestamps1_median, corr.alpha)
+
+    def test_alter_alpha(self):
+        alpha = 100
+        corr = GACF.correlator.Correlator(self.ds1)
+        corr.alpha = 100
+        self.assertEqual(alpha, corr.alpha)
+
+    def test_simple_correlation(self):
+        correlations, _ = GACF.find_correlation_from_lists(self.timestamps1, self.data1, lag_resolution=1.0)
+        self.assertEqual(correlations, self.simple_correlation_solution)
+
+    def test_two_correlation(self):
+        correlations, _ = GACF.find_correlation_from_lists(self.timestamps1, [self.data1, self.data1],
+                                                           lag_resolution=1.0)
+        self.assertEqual(correlations, self.two_correlation_solution)
 
 
 if __name__ == '__main__':

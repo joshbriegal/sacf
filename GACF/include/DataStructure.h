@@ -18,40 +18,47 @@ class BadDataFileReadException: public std::exception{
 
 class DataStructure{
     /*
-     * Data and data-manipulation functions stored here. Can be initialised with or without X errors and from a file
-     * containing this data in the format t, X, (X_error).
+     * Data and data-manipulation functions stored here. Can be initialised with or without data errors and from a file
+     * containing this data in the format t, data, (data_error).
      */
-    std::vector<double> X; std::vector<double> t; std::vector<double> X_err;
-    double X_mean; double t_median; double t_max; double t_length;
-    std::vector<double> norm_t; std::vector<double> norm_X;
+    std::vector<double> t; std::vector< std::vector<double> > _data; std::vector< std::vector<double> > err;
+    std::vector<double> data_mean; double t_median; double t_max; double t_length;
+    std::vector<double> norm_t; std::vector< std::vector<double> > norm_data;
 
-    void setXMean();
+    void setDataMean();
     void settMedian();
     void settMax();
     void calcNormt();
-    void calcNormX();
+    void calcNormData();
 
 public:
     explicit DataStructure(const std::string &filename);
     DataStructure(std::vector<double>*, std::vector<double>*);
     DataStructure(std::vector<double>*, std::vector<double>*, std::vector<double>*);
+    DataStructure(std::vector<double>*, std::vector< std::vector<double> >*);
+    DataStructure(std::vector<double>*, std::vector< std::vector<double> >*, std::vector< std::vector<double> >*);
 
     // returnable values from the dataset
-    std::vector<double>* rvalues();
-    std::vector<double>* rerrors();
+    std::vector< std::vector<double> >* rdata();
+    std::vector< std::vector<double> >* rerrors();
     std::vector<double>* rtimeseries();
     std::vector<double>* rnormalised_timeseries();
-    std::vector<double>* rnormalised_values();
+    std::vector< std::vector<double> >* rnormalised_data();
 
-    std::vector<double> values();
-    std::vector<double> errors();
+    std::vector< std::vector<double> > data();
+    std::vector< std::vector<double> > errors();
     std::vector<double> timeseries();
     std::vector<double> normalised_timeseries();
-    std::vector<double> normalised_values();
+    std::vector< std::vector<double> > normalised_data();
 
-    double mean_X();
+    std::vector<double> mean_data();
     double median_time() ;
     double max_time();
+};
+
+template<typename T>
+std::vector< std::vector<T> > convert_to_2d_vec(std::vector<T> vec_in){
+    return std::vector< std::vector<T> >(1, vec_in);
 };
 
 #endif //C_DATASTRUCTURE_H

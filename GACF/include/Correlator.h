@@ -15,17 +15,17 @@
 struct CorrelationIterator{
     // struct containing all useful data per k-step iteration
     double k;
-    double correlation;
+    std::vector<double> correlation;
     std::vector<double> shifted_timeseries;
     std::vector<long> selection_indices;
     std::vector<double> delta_t;
     std::vector<double> weights;
 
-    explicit CorrelationIterator(double);
+    explicit CorrelationIterator(double, double);
 };
 
 struct CorrelationData{
-    std::vector<double> X; std::vector<double> t;
+    std::vector< std::vector<double> > _correlations; std::vector<double> _timeseries;
 };
 
 class Correlator;
@@ -34,13 +34,15 @@ class Correlator;
 
 class Correlator{
 
-    DataStructure* data;
+    DataStructure* ds;
     CorrelationData correlation_data;
-    double N;
+    std::vector<double> N;
 
     double max_lag;
     double lag_resolution;
     double alpha; // characteristic length scale of weight functions
+    double data_length;
+    double num_data;
 
 public:
     explicit Correlator(DataStructure*);
@@ -70,15 +72,18 @@ public:
     void setAlpha(double);
     double getAlpha();
 
+    double getDataLength();
+    double getNumData();
+
     std::vector<double>* rnormalised_timeseries();
-    std::vector<double>* rvalues();
+    std::vector< std::vector<double> >* rvalues();
     std::vector<double>* rlag_timeseries();
-    std::vector<double>* rcorrelations();
+    std::vector< std::vector<double> >* rcorrelations();
 
     std::vector<double> normalised_timeseries();
-    std::vector<double> values();
+    std::vector< std::vector<double> > values();
     std::vector<double> lag_timeseries();
-    std::vector<double> correlations();
+    std::vector< std::vector<double> > correlations();
 
 
 };

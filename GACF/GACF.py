@@ -39,7 +39,7 @@ def set_up_correlation(corr, max_lag=None, lag_resolution=None, alpha=None):
 def find_correlation(corr, selection_function='natural', weight_function='gaussian'):
     def lag_generator(max_lag, lag_resolution):
         k = 0
-        while (k < max_lag):
+        while (k <= max_lag):
             yield k
             k += lag_resolution
 
@@ -48,7 +48,7 @@ def find_correlation(corr, selection_function='natural', weight_function='gaussi
     for k in tqdm(lag_generator(corr.max_lag, corr.lag_resolution),
                   desc='Calculating correlations',
                   total=num_steps):
-        col_it = CorrelationIterator(k)
+        col_it = CorrelationIterator(k, corr.num_data)
         SELECTION_FUNCTIONS[selection_function](corr, col_it)
         corr.deltaT(col_it)
         WEIGHT_FUNCTIONS[weight_function](corr, col_it)
@@ -72,7 +72,9 @@ def find_correlation_from_file(filename, max_lag=None, lag_resolution=None, sele
 
     set_up_correlation(corr, max_lag, lag_resolution, alpha)
     find_correlation(corr, selection_function, weight_function)
-    return {'lag_timeseries': corr.lag_timeseries(), 'correlations': corr.correlations()}
+    return {'lag_timeseries': corr.lag_timeseries(), 'correlations': (corr.correlations() if len(corr.correlations())
+                                                                                             > 1. else
+    corr.correlations()[0])}
 
 
 def find_correlation_from_lists(timeseries, values, errors=None, max_lag=None, lag_resolution=None,
@@ -96,4 +98,6 @@ def find_correlation_from_lists(timeseries, values, errors=None, max_lag=None, l
 
     set_up_correlation(corr, max_lag, lag_resolution, alpha)
     find_correlation(corr, selection_function, weight_function)
-    return {'lag_timeseries': corr.lag_timeseries(), 'correlations': corr.correlations()}, corr
+    return {'lag_timeseries': corr.lag_timeseries(), 'correlations': (corr.correlations() if len(corr.correlations())
+                                                                                             > 1. else
+    corr.correlations()[0])}, corr

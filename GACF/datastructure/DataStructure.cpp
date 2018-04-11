@@ -23,22 +23,36 @@ const char* BadDataFileReadException::what() const throw(){
 
 BadDataFileReadException BadFileEx;
 
-DataStructure::DataStructure(std::vector<double>* t_in, std::vector<double>* X_in){
-    if(X_in->empty() || t_in->empty()){
+DataStructure::DataStructure(std::vector<double>* t_in, std::vector< std::vector<double> >* data_in){
+    if(data_in->empty() || t_in->empty()){
         throw EmptyDSEx;
     }
-    X = *X_in;
+    _data = *data_in;
     t = *t_in;
-    setXMean(); settMax();
+    setDataMean(); settMax();
     norm_t.resize(t.size());
-    norm_X.resize(X.size());
-    calcNormt(); calcNormX();
+    norm_data.resize(_data.size());
+    calcNormt(); calcNormData();
     settMedian();
 };
 
-DataStructure::DataStructure(std::vector<double>* t_in, std::vector<double>* X_in, std::vector<double>* X_err_in):
-        DataStructure(X_in,t_in){
-    X_err = *X_err_in;
+DataStructure::DataStructure(std::vector<double>* t_in, std::vector< std::vector<double> >* data_in,
+                             std::vector< std::vector<double> >* data_err_in):
+        DataStructure(t_in, data_in){
+    err = *data_err_in;
+};
+
+DataStructure::DataStructure(std::vector<double>* t_in, std::vector<double>* data_in){
+    // Convert input vectors into vector of vectors
+    std::vector< std::vector<double> > data_in_new = convert_to_2d_vec(*data_in);
+    *this = DataStructure(t_in, &data_in_new);
+};
+
+DataStructure::DataStructure(std::vector<double>* t_in, std::vector<double>* data_in, std::vector<double>* data_err_in){
+    // Convert input vectors into vector of vectors
+    std::vector< std::vector<double> > data_in_new = convert_to_2d_vec(*data_in);
+    std::vector< std::vector<double> > data_err_in_new = convert_to_2d_vec(*data_err_in);
+    *this = DataStructure(t_in, &data_in_new, &data_err_in_new);
 };
 
 DataStructure::DataStructure(const std::string &filename){
@@ -86,11 +100,16 @@ DataStructure::DataStructure(const std::string &filename){
     }
 };
 
-void DataStructure::setXMean(){  // ignoring any 'NaN' values
-    std::vector<double> x_copy (sizeof(X));
-    auto const end = std::remove_copy_if(X.begin(), X.end(), x_copy.begin(), std::isnan<double>);
-    std::cout << std::endl;
-    X_mean = accumulate(x_copy.begin(), end, 0.0)/std::distance(x_copy.begin(), end);
+void DataStructure::setDataMean(){  // ignoring any 'NaN' values
+    data_mean = std::vector<double>(_data.size());
+    int i = 0;
+    for(auto const X: _data){
+        std::vector<double> x_copy (sizeof(X));
+        auto const end = std::remove_copy_if(X.begin(), X.end(), x_copy.begin(), std::isnan<double>);
+        std::cout << std::endl;
+        data_mean[i] = accumulate(x_copy.begin(), end, 0.0)/std::distance(x_copy.begin(), end);
+        i++;
+    }
 }
 
 void DataStructure::settMax(){ t_max = t.back(); } // as time array is ordered
@@ -99,8 +118,15 @@ void DataStructure::calcNormt(){
     transform(t.begin(), t.end(), norm_t.begin(), std::bind2nd(std::minus<double>(), t[0]));
 };
 
-void DataStructure::calcNormX(){
-    transform(X.begin(), X.end(), norm_X.begin(), std::bind2nd(std::minus<double>(), X_mean));
+void DataStructure::calcNormData(){
+    norm_data = std::vector< std::vector<double> >(_data.size(), std::vector<double>(_data[0].size()));
+    int i = 0;
+    for(auto const X: _data){
+//        norm_X = std::vector<double>(X.size())
+        transform(X.begin(), X.end(), norm_data[i].begin(), std::bind2nd(std::minus<double>(), data_mean[i]));
+//        norm_data.insert(i, norm_X)
+        i++;
+    }
 };
 
 void DataStructure::settMedian(){ //with respect to normalised timeseries
@@ -109,21 +135,21 @@ void DataStructure::settMedian(){ //with respect to normalised timeseries
     else {t_median = norm_t[size / 2];}
 }
 
-std::vector<double>* DataStructure::rvalues() { return &X; };
-std::vector<double>* DataStructure::rerrors(){ return &X_err; };
+std::vector< std::vector<double> >* DataStructure::rdata() { return &_data; };
+std::vector< std::vector<double> >* DataStructure::rerrors(){ return &err; };
 std::vector<double>* DataStructure::rtimeseries(){ return &t; };
 std::vector<double>* DataStructure::rnormalised_timeseries(){ return &norm_t; };
-std::vector<double>* DataStructure::rnormalised_values(){ return &norm_X; };
+std::vector< std::vector<double> >* DataStructure::rnormalised_data(){ return &norm_data; };
 
-std::vector<double> DataStructure::values() { return X; };
-std::vector<double> DataStructure::errors(){ return X_err; };
+std::vector< std::vector<double> > DataStructure::data() { return _data; };
+std::vector< std::vector<double> > DataStructure::errors(){ return err; };
 std::vector<double> DataStructure::timeseries(){ return t; };
 std::vector<double> DataStructure::normalised_timeseries(){ return norm_t; };
-std::vector<double> DataStructure::normalised_values(){ return norm_X; };
+std::vector< std::vector<double> > DataStructure::normalised_data(){ return norm_data; };
 
 
 
-double DataStructure::mean_X() { return X_mean; };
+std::vector<double> DataStructure::mean_data() { return data_mean; };
 double DataStructure::median_time() { return t_median; };
 double DataStructure::max_time() { return t_max; };
 
