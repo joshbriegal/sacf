@@ -4,6 +4,7 @@
 
 #include "Correlator.h"
 #include <cmath>
+#include <iostream>
 
 CorrelationIterator::CorrelationIterator(double k_in, double vec_size){
     k = k_in;
@@ -15,24 +16,25 @@ CorrelationIterator::CorrelationIterator(double k_in, double vec_size){
 
 Correlator::Correlator(DataStructure* ds_in){
     ds = ds_in;
-    num_data = ds->rdata()->size();
-    data_length = ds->rnormalised_timeseries()->size();
+    N_datasets = ds->N_datasets;
+    M_datapoints = ds->M_datapoints;
 
-    N = std::vector<double>(data_length);
+    N = std::vector<double>(N_datasets);
     int i = 0;
-    for(auto const& idata: ds->data()){
-        for(auto const& X: idata){
+    for(int j = 0; j < N_datasets; j++){
+        for(int i = 0; i < M_datapoints; i++){
+            float X = ds->rdata()->at(ds->getVectorIndex(i, j));
             if(!std::isnan(X)){
-                N[i] += (X - ds->mean_data()[i]) * (X - ds->mean_data()[i]);
+                N[j] += (X - ds->mean_data()[j]) * (X - ds->mean_data()[j]);
             }
         }
-        this->correlation_data._correlations.push_back(std::vector<double>(0));
-        i++;
     }
-
     max_lag = ds->rnormalised_timeseries()->back();
-    lag_resolution = max_lag / data_length;
+    lag_resolution = max_lag / M_datapoints;
     alpha = ds->median_time();
+    num_lag_steps = (int) std::floor(max_lag / lag_resolution);
+    correlation_data._correlations = std::vector<double>(N_datasets * num_lag_steps);
+    correlation_data._timeseries = std::vector<double>(num_lag_steps);
 };
 
 Correlator::Correlator(DataStructure *, DataStructure *) {
@@ -41,15 +43,24 @@ Correlator::Correlator(DataStructure *, DataStructure *) {
      */
 }
 
-std::vector<double>* Correlator::rnormalised_timeseries(){ return ds->rnormalised_timeseries(); }
-std::vector< std::vector<double> >* Correlator::rvalues(){ return ds->rdata(); }
-std::vector<double>* Correlator::rlag_timeseries() { return &correlation_data._timeseries; };
-std::vector< std::vector<double> >* Correlator::rcorrelations() { return &correlation_data._correlations; };
+//std::vector<double>* Correlator::rnormalised_timeseries(){ return ds->rnormalised_timeseries(); }
+//std::vector< std::vector<double> >* Correlator::rvalues(){ return ds->rdata(); }
 
 std::vector<double> Correlator::normalised_timeseries(){ return ds->normalised_timeseries(); }
-std::vector< std::vector<double> > Correlator::values(){ return ds->data(); }
+std::vector< std::vector<double> > Correlator::values(){ return ds->data_2d(); }
 std::vector<double> Correlator::lag_timeseries() { return correlation_data._timeseries; };
-std::vector< std::vector<double> > Correlator::correlations() { return correlation_data._correlations; };
+
+std::vector< std::vector<double> > Correlator::correlations() {
+    std::vector< std::vector<double> > correlations = std::vector< std::vector<double> >(N_datasets);
+    for(int j = 0; j < N_datasets; j++){
+        std::vector<double> dataset = std::vector<double>(num_lag_steps);
+        for(int i = 0; i < num_lag_steps; i++){
+            dataset[i] = correlation_data._correlations[i + j*num_lag_steps];
+        }
+        correlations[j] = dataset;
+    }
+    return correlations;
+};
 
 void Correlator::naturalSelectionFunctionIdx(CorrelationIterator* cor_it){
     /*
@@ -113,44 +124,25 @@ void Correlator::fastSelectionFunctionIdx(CorrelationIterator* cor_it){
 }
 
 void Correlator::findCorrelation(CorrelationIterator* cor_it){
-    int i = 0; int j = 0;
-//    for(auto const& weight: cor_it->weights){
-//        std::cout << "Calculating for point, weight " << i << " " << weight << std::endl;
-//        j = 0;
-//        for(auto const& idata: *ds->rnormalised_data()){
-//            std::cout << "Calculating for series " << j << std::endl;
-//            cor_it->correlation[j] += weight * idata[i] * idata[cor_it->selection_indices[i]];
-//            j++;
-//        }
-//        i++;
-//    }
-//    std::cout << std::endl;
-
-
-//
-    for(auto const& idata: ds->normalised_data()){
-        i = 0;
-//        std::cout << "Calculating for series " << j << std::endl;
+    for(int j = 0; j < N_datasets; j++){
+        int i = 0;
         for(auto const& weight: cor_it->weights){
-//              std::cout << "Calculating for point, weight " << i << " " << weight << std::endl;
-            cor_it->correlation[j] += weight * (idata[i]) *
-                                   (idata[cor_it->selection_indices[i]]);
+            cor_it->correlation[j] += weight * (ds->rnormalised_data()->at(ds->getVectorIndex(i, j))) *
+                                      (ds->rnormalised_data()->at(ds->getVectorIndex(cor_it->selection_indices[i], j)));
             i++;
         }
         cor_it->correlation[j] *= (1 / N[j]);
-        j++;
     }
-//      std::cout << std::endl;
 }
 
 
 double Correlator::fractionWeightFunction(double delta_t){
-    return 1 / (1 + (delta_t / this->alpha));
+    return 1 / (1 + (delta_t / alpha));
 }
 
 
 double Correlator::gaussianWeightFunction(double delta_t){
-    return exp( -((delta_t) * (delta_t)) / (2 * this->alpha * this->alpha));
+    return exp( -((delta_t) * (delta_t)) / (2 * alpha * alpha));
 }
 
 void Correlator::deltaT(CorrelationIterator* cor_it){
@@ -165,7 +157,7 @@ void Correlator::deltaT(CorrelationIterator* cor_it){
 void Correlator::getFractionWeights(CorrelationIterator* cor_it){
     int i = 0;
     for(auto const& value: cor_it->delta_t){
-        cor_it->weights.push_back(this->fractionWeightFunction(value));
+        cor_it->weights.push_back(fractionWeightFunction(value));
         i++;
     }
 }
@@ -173,46 +165,44 @@ void Correlator::getFractionWeights(CorrelationIterator* cor_it){
 void Correlator::getGaussianWeights(CorrelationIterator* cor_it){
     int i = 0;
     for(auto const& value: cor_it->delta_t){
-        cor_it->weights.push_back(this->gaussianWeightFunction(value));
+        cor_it->weights.push_back(gaussianWeightFunction(value));
         i++;
     }
 }
 
 void Correlator::setMaxLag(double max_lag_in){
-    this->max_lag = max_lag_in;
+    max_lag = max_lag_in;
 }
 double Correlator::getMaxLag(){
-    return this->max_lag;
+    return max_lag;
 }
 
 void Correlator::setLagResolution(double lag_res){
-    this->lag_resolution = lag_res;
+    lag_resolution = lag_res;
 }
 double Correlator::getLagResolution(){
-    return this->lag_resolution;
+    return lag_resolution;
 }
 
 void Correlator::setAlpha(double alpha_in){
-    this->alpha = alpha_in;
+    alpha = alpha_in;
 }
 double Correlator::getAlpha(){
-    return this->alpha;
+    return alpha;
 }
 
-double Correlator::getDataLength(){
-    return this->data_length;
+double Correlator::getMDatapoints(){
+    return M_datapoints;
 }
 
-double Correlator::getNumData(){
-    return this->num_data;
+double Correlator::getNDatasets(){
+    return N_datasets;
 }
 
-void Correlator::addCorrelationData(CorrelationIterator* col_it){
-    this->correlation_data._timeseries.push_back(col_it->k);
-    int i = 0;
-    for(auto const& data_series_point: col_it->correlation){
-        this->correlation_data._correlations[i].push_back(data_series_point);
-        i++;
+void Correlator::addCorrelationData(CorrelationIterator* col_it, int timestep_number){
+    correlation_data._timeseries[timestep_number] = col_it->k;
+    for(int j = 0; j < N_datasets; j++){
+        correlation_data._correlations[timestep_number + num_lag_steps * j] = col_it->correlation[j];
     }
 //    this->correlation_data._correlations.push_back(col_it->correlation);
 }

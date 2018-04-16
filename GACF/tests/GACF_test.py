@@ -57,10 +57,12 @@ class TestDataStructure(unittest.TestCase):
                                               TestDataStructure.numpy_float_array_with_nan)
 
     def test_uneven_lists(self):
-        ds = GACF.datastructure.DataStructure(TestDataStructure.short_integer_list, TestDataStructure.integer_list)
+        with self.assertRaises(GACF.datastructure.BadDataInputException):
+            ds = GACF.datastructure.DataStructure(TestDataStructure.short_integer_list, TestDataStructure.integer_list)
 
     def test_uneven_lists2(self):
-        ds = GACF.datastructure.DataStructure(TestDataStructure.integer_list, TestDataStructure.short_integer_list)
+        with self.assertRaises(GACF.datastructure.BadDataInputException):
+            ds = GACF.datastructure.DataStructure(TestDataStructure.integer_list, TestDataStructure.short_integer_list)
 
     # Tests for 3 list constructor
 
@@ -162,7 +164,7 @@ class TestDataStructure(unittest.TestCase):
         self.assertEqual(TestDataStructure.integer_list2_mean, ds.mean_data[0])
 
     def test_mean_data_nan(self):
-        ds = GACF.datastructure.DataStructure(TestDataStructure.integer_list,
+        ds = GACF.datastructure.DataStructure(np.append(TestDataStructure.integer_list, 4),
                                               TestDataStructure.numpy_float_array_with_nan)
         self.assertEqual(TestDataStructure.float_list_mean, ds.mean_data[0])
 
@@ -173,7 +175,7 @@ class TestDataStructure(unittest.TestCase):
 
     def test_median_time_nan(self):
         ds = GACF.datastructure.DataStructure(TestDataStructure.numpy_float_array_with_nan,
-                                              TestDataStructure.integer_list)
+                                              np.append(TestDataStructure.integer_list, 4))
         self.assertEqual(TestDataStructure.numpy_float_array_with_nan_median, ds.median_time)
 
     def test_max_time(self):

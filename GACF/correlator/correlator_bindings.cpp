@@ -37,8 +37,8 @@ PYBIND11_MODULE(correlator, c) {
         .def_property("max_lag", &Correlator::getMaxLag, &Correlator::setMaxLag)
         .def_property("lag_resolution", &Correlator::getLagResolution, &Correlator::setLagResolution)
         .def_property("alpha", &Correlator::getAlpha, &Correlator::setAlpha)
-        .def_property_readonly("data_length", &Correlator::getDataLength)
-        .def_property_readonly("num_data", &Correlator::getNumData)
+        .def_property_readonly("M_datapoints", &Correlator::getMDatapoints)
+        .def_property_readonly("N_datasets", &Correlator::getNDatasets)
         ;
 
 }

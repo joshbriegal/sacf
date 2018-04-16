@@ -45,15 +45,15 @@ def find_correlation(corr, selection_function='natural', weight_function='gaussi
 
     num_steps = int(round(corr.max_lag / corr.lag_resolution))
 
-    for k in tqdm(lag_generator(corr.max_lag, corr.lag_resolution),
-                  desc='Calculating correlations',
-                  total=num_steps):
-        col_it = CorrelationIterator(k, corr.num_data)
+    for i, k in enumerate(tqdm(lag_generator(corr.max_lag, corr.lag_resolution),
+                               desc='Calculating correlations',
+                               total=num_steps)):
+        col_it = CorrelationIterator(k, corr.N_datasets)
         SELECTION_FUNCTIONS[selection_function](corr, col_it)
         corr.deltaT(col_it)
         WEIGHT_FUNCTIONS[weight_function](corr, col_it)
         corr.findCorrelation(col_it)
-        corr.addCorrelationData(col_it)
+        corr.addCorrelationData(col_it, i)
 
 
 def find_correlation_from_file(filename, max_lag=None, lag_resolution=None, selection_function='natural',
@@ -74,7 +74,7 @@ def find_correlation_from_file(filename, max_lag=None, lag_resolution=None, sele
     find_correlation(corr, selection_function, weight_function)
     return {'lag_timeseries': corr.lag_timeseries(), 'correlations': (corr.correlations() if len(corr.correlations())
                                                                                              > 1. else
-    corr.correlations()[0])}
+    corr.correlations()[0])}, corr
 
 
 def find_correlation_from_lists(timeseries, values, errors=None, max_lag=None, lag_resolution=None,
