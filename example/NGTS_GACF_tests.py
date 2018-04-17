@@ -268,7 +268,7 @@ def autocorrelation_plots(data_timeseries, data_values, correlation_timeseries, 
     if max_peak:
         ax3.axhline(y=max_peak, lw=0.2, ls='--')
         ax3.text(min(fft_periods), max_peak*1.2, 'threshold {}'.format(max_peak), fontsize=8)
-    if running_max_peak:
+    if running_max_peak is not None:
         ax3.fill_between(fft_periods, 0, running_max_peak, alpha=0.5)
     ax3.set_title('FFT with peak detection')
     ax3.set_xlim(xmin=0)
@@ -306,7 +306,7 @@ def save_autocorrelation_plots(data_timeseries, data_values, correlation_timeser
         if max_peak:
             ft_ax.axhline(y=max_peak, lw=0.2, ls='--')
             ft_ax.text(min(fft_periods), max_peak*1.2, 'threshold {}'.format(max_peak), fontsize=8,)
-        if running_max_peak:
+        if running_max_peak is not None:
             ft_ax.fill_between(fft_periods, 0, running_max_peak, alpha=0.5)
         ft_ax.set_xlabel('Period (days)')
         ft_ax.set_title('FFT with peak detection')
@@ -449,8 +449,8 @@ def fourier_transform_and_peaks(correlations, lag_timeseries, len_ft=None):
 
     # Find peaks of FFT
 
-    indexes = peakutils.indexes(ft, thres=0.25,  # Fraction of largest peak
-                                min_dist=1  # Number of data points between
+    indexes = peakutils.indexes(ft, thres=0.1,  # Fraction of largest peak
+                                min_dist=3  # Number of data points between
                                 )
 
     return ft, periods, indexes
@@ -580,12 +580,14 @@ def autocol_and_phase_folds(file, num_phase_plots=5, do_remove_transit=False, kn
 
     indexes = [index for index in indexes if periods[index] > 1 and index != 1]  # prune short periods & last point
     indexes = [index for index in indexes if periods[index] < 0.5 * (time_series[-1] - time_series[0])]
+    signal_to_noise = None
     # prune periods more than half the time series
-    if noise_threshold:
+    if noise_threshold is not None:
         indexes = [index for index in indexes if ft[index] > noise_threshold]  # prune peaks below noise if given
-    if running_noise_threshold:
+    if running_noise_threshold is not None:
         # prune peaks below running noise if given
         indexes = [index for index in indexes if ft[index] > running_noise_threshold[index]]
+        signal_to_noise = [ft[index] / running_noise_threshold[index] for index in indexes]
 
     indexes = [index for index, _ in sorted(zip(indexes, [ft[index] for index in indexes]),
                                             key=lambda pair: pair[1], reverse=True)]  # sort peaks by amplitude
@@ -595,6 +597,7 @@ def autocol_and_phase_folds(file, num_phase_plots=5, do_remove_transit=False, kn
     logger.info('peak periods: {}'.format([periods[index] for index in indexes]))
     logger.info('peak amplitudes: {}'.format([ft[index] for index in indexes]))
     logger.info('peak percentages: {}'.format([str(p * 100) + '%' for p in peak_percentages]))
+    logger.info('signal to noise {}'.format(signal_to_noise))
 
     # interpolate periods
 
@@ -732,17 +735,27 @@ def find_noise_level(file, no_samples=10, **kwargs):
     gen_autocol_dict = {}
     gen_ft_dict = {}
 
-    gen_data_dict['max'] = [max(generated_data[:, i]) for i, _ in enumerate(time_series)]
-    gen_data_dict['min'] = [min(generated_data[:, i]) for i, _ in enumerate(time_series)]
-    gen_data_dict['median'] = [np.median(generated_data[:, i]) for i, _ in enumerate(time_series)]
+    data_transpose = np.array([generated_data[:, i] for i, _ in enumerate(time_series)])
+    gen_data_dict['max'] = [max(data) for data in data_transpose]
+    gen_data_dict['min'] = [min(data) for data in data_transpose]
+    gen_data_dict['median'] = [np.median(data) for data in data_transpose]
 
-    gen_autocol_dict['max'] = [max(generated_correlations[:, i]) for i, _ in enumerate(lag_timeseries)]
-    gen_autocol_dict['min'] = [min(generated_correlations[:, i]) for i, _ in enumerate(lag_timeseries)]
-    gen_autocol_dict['median'] = [np.median(generated_correlations[:, i]) for i, _ in enumerate(lag_timeseries)]
+    autocol_transpose = np.array([generated_correlations[:, i] for i, _ in enumerate(lag_timeseries)])
+    gen_autocol_dict['max'] = [max(autocol) for autocol in autocol_transpose]
+    gen_autocol_dict['min'] = [min(autocol) for autocol in autocol_transpose]
+    gen_autocol_dict['median'] = [np.median(autocol) for autocol in autocol_transpose]
 
-    gen_ft_dict['max'] = [max(generated_ft[:, i]) for i, _ in enumerate(generated_periods)]
-    gen_ft_dict['min'] = [min(generated_ft[:, i]) for i, _ in enumerate(generated_periods)]
-    gen_ft_dict['median'] = [np.median(generated_ft[:, i]) for i, _ in enumerate(generated_periods)]
+    gen_ft_transpose = np.array([generated_ft[:, i] for i, _ in enumerate(generated_periods)])
+    gen_ft_dict['max'] = [max(gen_ft) for gen_ft in gen_ft_transpose]
+    gen_ft_dict['min'] = [min(gen_ft) for gen_ft in gen_ft_transpose]
+    gen_ft_dict['median'] = [np.median(gen_ft) for gen_ft in gen_ft_transpose]
+
+    # gen_ft_above_median = np.array([gen_ft[np.where(gen_ft > gen_ft_dict['median'][i])]
+    #                                 for i, gen_ft in enumerate(gen_ft_transpose)])
+    # std_dev_from_median = np.array([gen_ft - gen_ft_dict['median'][i] for i, gen_ft in enumerate(gen_ft_above_median)])
+    # five_sigma = np.multiply(5.0, [np.mean(std_dev) for std_dev in std_dev_from_median])
+
+    five_sigma = np.multiply(gen_ft_dict['max'], 5.0 / 3.0)  # multiply 3-sigma threshold by 5/3 to get 5 sigma
 
     # fig, ax = plt.subplots()
     #
@@ -758,12 +771,12 @@ def find_noise_level(file, no_samples=10, **kwargs):
     #                                  generated_periods, generated_ft, generated_indexes, file_dir, max_peak)
 
     save_autocorrelation_plots_multi(time_series, gen_data_dict, lag_timeseries, gen_autocol_dict, generated_periods,
-                               gen_ft_dict, generated_indexes, file_dir, max_peak)
+                                     gen_ft_dict, generated_indexes, file_dir, max_peak)
 
     logger.info('Noise Threshold: {}'.format(max_peak))
-    logger.info('Running: {}'.format(gen_ft_dict['max']))
+    logger.info('Running: {}'.format(five_sigma.tolist()))
 
-    return max_peak, gen_ft_dict['max']
+    return max_peak, five_sigma
 
 
 def pool_map_errors(file):
@@ -773,7 +786,7 @@ def pool_map_errors(file):
         print 'Caught Exception in child process for file {}'.format(file)
         traceback.print_exc()
         print()
-        raise e
+        return None
 
 
 def pool_map((file, noise_threshold)):
@@ -814,7 +827,6 @@ def get_threshold_from_file(filename):
                 except AttributeError:
                     continue
         return noise_threshold, noise_thresholds
-
     except IOError:
         return None, None
     except (TypeError, ValueError):
@@ -837,14 +849,14 @@ if __name__ == '__main__':
     files = os.listdir(file_location)
 
     # filter files
-    files = [file_location + f for f in files if ('tbin' in f and 'NG1444' in f)]
+    files = [file_location + f for f in files if ('tbin' in f)]
     # logger.info('Running on files: \n{}'.format('\n'.join(files)))
     # files = ['/Users/joshbriegal/GitHub/GACF/example/files/NG0612-2518_044284_LC_tbin=10min.dat']
     pool = mp.Pool(processes=mp.cpu_count())
 
     # noise_thresholds = [None for i in range(len(files))]
-    noise_thresholds = pool.map(pool_map_errors, files)
-    # noise_thresholds = [get_threshold_from_file(f) for f in files]
+    # noise_thresholds = pool.map(pool_map_errors, files)
+    noise_thresholds = [get_threshold_from_file(f) for f in files]
     running_noise_thresholds = [n[1] for n in noise_thresholds]
     noise_thresholds = [n[0] for n in noise_thresholds]
     logger.info('Noise Thresholds: {}'.format(noise_thresholds))
