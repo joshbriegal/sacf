@@ -786,7 +786,7 @@ def pool_map_errors(file):
         print 'Caught Exception in child process for file {}'.format(file)
         traceback.print_exc()
         print()
-        return None
+        return None, None
 
 
 def pool_map((file, noise_threshold)):
@@ -849,14 +849,14 @@ if __name__ == '__main__':
     files = os.listdir(file_location)
 
     # filter files
-    files = [file_location + f for f in files if ('tbin' in f)]
+    files = [file_location + f for f in files if ('tbin' in f and 'NG2331' in f)]
     # logger.info('Running on files: \n{}'.format('\n'.join(files)))
     # files = ['/Users/joshbriegal/GitHub/GACF/example/files/NG0612-2518_044284_LC_tbin=10min.dat']
     pool = mp.Pool(processes=mp.cpu_count())
 
     # noise_thresholds = [None for i in range(len(files))]
-    # noise_thresholds = pool.map(pool_map_errors, files)
-    noise_thresholds = [get_threshold_from_file(f) for f in files]
+    noise_thresholds = pool.map(pool_map_errors, files)
+    # noise_thresholds = [get_threshold_from_file(f) for f in files]
     running_noise_thresholds = [n[1] for n in noise_thresholds]
     noise_thresholds = [n[0] for n in noise_thresholds]
     logger.info('Noise Thresholds: {}'.format(noise_thresholds))
