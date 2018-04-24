@@ -9,6 +9,7 @@ from multiprocessing import Pool, cpu_count
 import pickle
 from copy import deepcopy
 import os
+from GACF_utils import get_ngts_data
 
 
 def worker(arg):
@@ -93,7 +94,7 @@ class Field(object):
 
         if len(self.objects) == 0:
             self.initialise_objects()
-        dic = NGTSObject.get_ngts_data(fieldname=self.fieldname, obj_id=self.object_list if
+        dic = get_ngts_data(fieldname=self.fieldname, obj_id=self.object_list if
         obj_ids is None else obj_ids, ngts_version=self.test, return_dic=True)
         if use_multiprocessing:
             pool = Pool(cpu_count())
@@ -134,18 +135,3 @@ if __name__ == '__main__':
 
     # field.pickle_field()
 
-    for obj in field:
-        print obj, obj.num_observations, obj.num_observations_binned, "observations"
-        for obj2 in field2:
-            if obj2.obj == obj.obj:
-                print obj2, obj2.num_observations, obj2.num_observations_binned, "observations"
-
-    # field.objects = [obj for obj in field if obj.num_observations<100]
-    dic = ngtsio.get(fieldname=field.fieldname, ngts_version=field.test, obj_id=field[0].obj, keys=field[0].lc_data2get)
-    print "dic = ngtsio.get(fieldname='{}', ngts_version='{}', obj_id='{}', keys={})".format(
-        field.fieldname, field.test, field[0].obj, field[0].lc_data2get)
-
-    # for obj in field2.objects:
-    # print obj, obj.num_observations_binned, "observations"
-
-    # print obj_JJ, obj_JJ.num_observations_binned

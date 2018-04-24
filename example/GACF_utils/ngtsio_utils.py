@@ -62,7 +62,7 @@ def clean_ngts_data(dic, nsig2keep=None, do_relflux=True, bad_data_ratio_thresho
     flux = dic['SYSREM_FLUX3']
     num_observations_initial = len(flux)
     if nsig2keep is not None:
-        med, sig = NGTSObject.medsig(flux)
+        med, sig = medsig(flux)
         idx_ok = (abs(flux - med) < nsig2keep * sig) * (flux != 0.)
     else:
         idx_ok = (flux != 0.)

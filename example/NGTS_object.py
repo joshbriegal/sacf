@@ -17,6 +17,8 @@ class NGTSObject(object):
             self.filename = os.getcwd()
         else:
             self.filename = os.path.join(field_filename, "{}_VERSION_{}".format(obj, test))
+            if not os.path.exists(self.filename):
+                os.makedirs(self.filename)
 
         # NGTSIO inputs
         self.obj = obj
@@ -198,7 +200,7 @@ class NGTSObject(object):
         indexes = indexes[:num_periods]  # trim to n most significant peaks
 
         peak_percentages = [ft[index] / ft[indexes[0]] for index in indexes]
-        if running_noise_threshold:
+        if running_noise_threshold is not None:
             signal_to_noise = [ft[index] / running_noise_threshold[index] for index in indexes]
 
         self.ft = ft
@@ -214,59 +216,40 @@ class NGTSObject(object):
                                          self.flux_binned if use_binned_data else self.flux,
                                          self.lag_timeseries, self.correlations,
                                          self.period_axis, self.ft, self.peak_indexes,
-                                         os.path.join(self.filename, 'autocorrelation.png'),
+                                         os.path.join(self.filename, 'autocorrelation.pdf'),
                                          running_max_peak=self.running_noise_threshold)
 
     def plot_error_calculations(self):
         utils.save_autocorrelation_plots_multi(self.timeseries_binned, self.gen_data_dict, self.lag_timeseries,
                                                self.gen_autocol_dict, self.period_axis,
                                                self.gen_ft_dict,
-                                               os.path.join(self.filename, ['errors', 'autocorrelation.png']))
+                                               os.path.join(self.filename, ['errors', 'autocorrelation.pdf']))
 
     def plot_data(self, use_binned_data=True):
         utils.save_data_plot(self.timeseries_binned if use_binned_data else self.timeseries,
                              self.flux_binned if use_binned_data else self.flux,
-                             filename=os.path.join(self.filename, 'data.png'))
+                             filename=os.path.join(self.filename, 'data.pdf'))
 
     def plot_autocol(self):
         utils.save_autocorrelation_plot(self.lag_timeseries, self.correlations,
-                                        filename=os.path.join(self.filename, 'autocorrelation_function.png'))
+                                        filename=os.path.join(self.filename, 'autocorrelation_function.pdf'))
 
     def plot_ft(self):
         utils.save_ft_plt(self.period_axis, self.ft, self.peak_indexes,
-                          filename=os.path.join(self.filename, 'fourier_transform.png'),
+                          filename=os.path.join(self.filename, 'fourier_transform.pdf'),
                           running_noise_threshold=self.running_noise_threshold)
 
     def plot_phase_folded_lcs(self, use_binned_data=True):
-        for i, period in self.periods:
+        for i, period in enumerate(self.periods):
             utils.save_phase_plot(self.timeseries_binned if use_binned_data else self.timeseries,
                                   period, 0,
                                   self.flux_binned if use_binned_data else self.flux,
                                   peak_percentage=self.peak_percentages[i],
-                                  filename=os.path.join(self.filename, 'phase_fold_{}_days'.format(period)))
+                                  filename=os.path.join(self.filename, 'phase_fold_{}_days.pdf'.format(period)))
 
     def plot_phase_folded_lc(self, period, epoch=0, peak_percentage=None, use_binned_data=True):
         utils.save_phase_plot(self.timeseries_binned if use_binned_data else self.timeseries,
                               period, epoch,
                               self.flux_binned if use_binned_data else self.flux,
-                              filename=os.path.join(self.filename, 'phase_fold_{}_days'.format(period)),
+                              filename=os.path.join(self.filename, 'phase_fold_{}_days.pdf'.format(period)),
                               peak_percentage=peak_percentage)
-
-
-if __name__ == '__main__':
-    from time import time
-
-    obj = NGTSObject(1, 1, 1)
-    obj.timeseries = np.load('JamesJackmanWork/NG2331-3922_009138_hjd.npy')
-    obj.flux = np.load('JamesJackmanWork/NG2331-3922_009138_flux.npy')
-    # obj.flux_binned_err = np.load('JamesJackmanWork/NG2331-3922_009138_flux_error.npy')
-    # obj.plot_data(use_binned_data=False)
-    print 'Binning Data'
-    bin_start = time()
-    obj.bin_data()
-    bin_end = time()
-    print "Took {} seconds to bin".format(bin_end - bin_start)
-    print 'Finding Noise threshold'
-    obj.get_noise_threshold()
-    print 'Getting Periods'
-    obj.get_periods_from_autocorrelation()

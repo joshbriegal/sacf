@@ -230,7 +230,7 @@ def save_ft_plt(fft_periods, fft_data, fft_indexes, filename, noise_threshold=No
         ax.axhline(y=noise_threshold, lw=0.2, ls='--')
         ax.text(min(fft_periods), noise_threshold * 1.2, 'threshold {}'.format(noise_threshold), fontsize=8, )
     if running_noise_threshold is not None:
-        running_noise_threshold.fill_between(fft_periods, 0, running_noise_threshold, alpha=0.5)
+        ax.fill_between(fft_periods, 0, running_noise_threshold, alpha=0.5)
     ax.set_xlabel('Period (days)')
     ax.set_title('FFT with peak detection')
     ax.set_xlim(xmin=0)

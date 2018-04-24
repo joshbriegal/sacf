@@ -102,7 +102,7 @@ def get_noise_level(time_series, generated_data, sigma_level_calc=3, sigma_level
     lag_timeseries = generated_correlations['lag_timeseries']
     generated_correlations = np.array(generated_correlations['correlations'])
 
-    generated_periods, generated_data, generated_ft = None, None, None
+    generated_periods, generated_ft = None, None
 
     for i, correlations in enumerate(tqdm(generated_correlations,
                                           total=no_samples, desc='Calculating Noise Fourier Transforms')):
