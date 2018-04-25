@@ -5,6 +5,7 @@ import numpy as np
 from GACF import find_correlation_from_lists
 import GACF_utils as utils
 import os
+import pickle
 
 
 class NGTSObject(object):
@@ -218,26 +219,31 @@ class NGTSObject(object):
                                          self.period_axis, self.ft, self.peak_indexes,
                                          os.path.join(self.filename, 'autocorrelation.pdf'),
                                          running_max_peak=self.running_noise_threshold)
+        return
 
     def plot_error_calculations(self):
         utils.save_autocorrelation_plots_multi(self.timeseries_binned, self.gen_data_dict, self.lag_timeseries,
                                                self.gen_autocol_dict, self.period_axis,
                                                self.gen_ft_dict,
                                                os.path.join(self.filename, ['errors', 'autocorrelation.pdf']))
+        return
 
     def plot_data(self, use_binned_data=True):
         utils.save_data_plot(self.timeseries_binned if use_binned_data else self.timeseries,
                              self.flux_binned if use_binned_data else self.flux,
                              filename=os.path.join(self.filename, 'data.pdf'))
+        return
 
     def plot_autocol(self):
         utils.save_autocorrelation_plot(self.lag_timeseries, self.correlations,
                                         filename=os.path.join(self.filename, 'autocorrelation_function.pdf'))
+        return
 
     def plot_ft(self):
         utils.save_ft_plt(self.period_axis, self.ft, self.peak_indexes,
                           filename=os.path.join(self.filename, 'fourier_transform.pdf'),
                           running_noise_threshold=self.running_noise_threshold)
+        return
 
     def plot_phase_folded_lcs(self, use_binned_data=True):
         for i, period in enumerate(self.periods):
@@ -246,6 +252,7 @@ class NGTSObject(object):
                                   self.flux_binned if use_binned_data else self.flux,
                                   peak_percentage=self.peak_percentages[i],
                                   filename=os.path.join(self.filename, 'phase_fold_{}_days.pdf'.format(period)))
+        return
 
     def plot_phase_folded_lc(self, period, epoch=0, peak_percentage=None, use_binned_data=True):
         utils.save_phase_plot(self.timeseries_binned if use_binned_data else self.timeseries,
@@ -253,3 +260,10 @@ class NGTSObject(object):
                               self.flux_binned if use_binned_data else self.flux,
                               filename=os.path.join(self.filename, 'phase_fold_{}_days.pdf'.format(period)),
                               peak_percentage=peak_percentage)
+        return
+
+    def pickle_object(self, pickle_file=None):
+   		if pickle_file is None:
+   			pickle_file = os.path.join(self.filename, [self, '.pkl'])
+   		pickle.dump(self, open(pickle_file, 'w'))
+   		return

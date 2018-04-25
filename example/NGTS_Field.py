@@ -33,9 +33,10 @@ class Field(object):
         self.object_list = None
         self.num_objects = None
         self.objects = []
+        self.filename = os.path.join(os.getcwd(), self.fieldname)
         self.get_objects(initialise_objects=initialise_objects, nObj=nObj)
 
-        self.filename = os.path.join(os.getcwd(), self.fieldname)
+        
 
     def __str__(self):
         return "NGTS Field " + self.fieldname
@@ -76,7 +77,8 @@ class Field(object):
         if self.object_list is None:
             raise ValueError("No object list to initialise from")
         for obj_id in self.object_list:
-            self.objects.append(NGTSObject(obj=obj_id, field=self.fieldname, test=self.test, *kwargs))
+            self.objects.append(NGTSObject(obj=obj_id, field=self.fieldname, test=self.test,
+                                           field_filename=self.filename, *kwargs))
         return
 
     def get_object_lc(self, obj_ids=None, bin=True, delete_unbinned=True):
