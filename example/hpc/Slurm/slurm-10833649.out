@@ -1,0 +1,37 @@
+init.c(556):ERROR:161: Cannot initialize TCL
+init.c(556):ERROR:161: Cannot initialize TCL
+init.c(556):ERROR:161: Cannot initialize TCL
+init.c(556):ERROR:161: Cannot initialize TCL
+init.c(556):ERROR:161: Cannot initialize TCL
+init.c(556):ERROR:161: Cannot initialize TCL
+Traceback (most recent call last):
+  File "/usr/local/software/spack/develop-290617/spack/opt/spack/linux-rhel7-x86_64/gcc-5.4.0/miniconda2-4.3.14-xjtq53hif5on35aajpyxy523u4mdwlja/bin/conda", line 7, in <module>
+    from conda.cli import main
+ImportError: No module named conda.cli
+Changed directory to /home/jtb34/rds/hpc-work/GACF_OUTPUTS/NG1421+0000.
+
+JobID: 10833649
+======
+Time: Sat 20 Apr 08:51:51 BST 2019
+Running on master node: cpu-e-432
+Current directory: /home/jtb34/rds/hpc-work/GACF_OUTPUTS/NG1421+0000
+/var/spool/slurm/slurmd/job10833649/slurm_script: line 120: machine.file.10833649: Disk quota exceeded
+
+Nodes allocated:
+================
+cat: machine.file.10833649: No such file or directory
+
+
+numtasks=1, numnodes=1, mpi_tasks_per_node=1 (OMP_NUM_THREADS=1)
+
+Executing command:
+==================
+/home/jtb34/.conda/envs/env_gacf/bin/python NGTSFieldRun.py
+
+no display found. Using non-interactive Agg backend
+Traceback (most recent call last):
+  File "NGTSFieldRun.py", line 224, in <module>
+    fits_file, FIELDNAME, CYCLE = find_fits_file()    
+  File "NGTSFieldRun.py", line 78, in find_fits_file
+    raise IOError('File not found in directory {}'.format(directory))
+IOError: File not found in directory /rds/user/jtb34/hpc-work/GACF_OUTPUTS/NG1421+0000

@@ -1,0 +1,39 @@
+init.c(556):ERROR:161: Cannot initialize TCL
+init.c(556):ERROR:161: Cannot initialize TCL
+init.c(556):ERROR:161: Cannot initialize TCL
+init.c(556):ERROR:161: Cannot initialize TCL
+init.c(556):ERROR:161: Cannot initialize TCL
+init.c(556):ERROR:161: Cannot initialize TCL
+Traceback (most recent call last):
+  File "/usr/local/software/spack/develop-290617/spack/opt/spack/linux-rhel7-x86_64/gcc-5.4.0/miniconda2-4.3.14-xjtq53hif5on35aajpyxy523u4mdwlja/bin/conda", line 7, in <module>
+    from conda.cli import main
+ImportError: No module named conda.cli
+Changed directory to /home/jtb34/rds/hpc-work/GACF_OUTPUTS/NG1407-3345.
+
+JobID: 10802317
+======
+Time: Thu 18 Apr 16:05:13 BST 2019
+Running on master node: cpu-e-455
+Current directory: /home/jtb34/rds/hpc-work/GACF_OUTPUTS/NG1407-3345
+/var/spool/slurm/slurmd/job10802317/slurm_script: line 120: machine.file.10802317: Disk quota exceeded
+
+Nodes allocated:
+================
+cat: machine.file.10802317: No such file or directory
+
+
+numtasks=1, numnodes=1, mpi_tasks_per_node=1 (OMP_NUM_THREADS=1)
+
+Executing command:
+==================
+/home/jtb34/.conda/envs/env_gacf/bin/python NGTSFieldRun.py
+
+no display found. Using non-interactive Agg backend
+Traceback (most recent call last):
+  File "NGTSFieldRun.py", line 227, in <module>
+    fh = logging.FileHandler(os.path.join(*[ROOT_FILE,FIELDNAME,'main.log']), mode='w')
+  File "/home/jtb34/.conda/envs/env_gacf/lib/python2.7/logging/__init__.py", line 920, in __init__
+    StreamHandler.__init__(self, self._open())
+  File "/home/jtb34/.conda/envs/env_gacf/lib/python2.7/logging/__init__.py", line 950, in _open
+    stream = open(self.baseFilename, self.mode)
+IOError: [Errno 122] Disk quota exceeded: '/home/jtb34/rds/hpc-work/GACF_OUTPUTS/NG1407-3345/main.log'

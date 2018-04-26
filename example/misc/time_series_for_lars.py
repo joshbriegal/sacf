@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 def get_data_from_file(filename):
     ds = DataStructure(filename)
-    return ds.timeseries(), ds.values()
+    return ds.timeseries(), ds.data()
 
 
 if __name__ == '__main__':
@@ -16,12 +16,18 @@ if __name__ == '__main__':
 
     filename = '/Users/joshbriegal/GitHub/GACF/example/files/NG0522-2518_025520_LC_tbin=10min.dat'
 
+    num_points = 500
+
     time_series, _ = get_data_from_file(filename)
     time_series = np.array(time_series)
     time_series = time_series - time_series[0]
+    np.savetxt('irregular_sampling.txt', time_series, header='time', fmt='%10.10f')
     time_series = time_series[:4000]
+    # num_points = len(time_series)
 
-    regular_timeseries = np.linspace(time_series[0], time_series[-1], len(time_series))
+    time_series = time_series[0::int(len(time_series) / num_points)]
+
+    regular_timeseries = np.linspace(time_series[0], time_series[-1], num_points)
     delta_t = regular_timeseries[1] - regular_timeseries[0] / 2
     random_timeseries = np.fromiter([t + (np.random.ranf() * delta_t + (delta_t / 2.)) for t in regular_timeseries],
                                     dtype=type(np.random.ranf()))
@@ -65,7 +71,7 @@ if __name__ == '__main__':
 
     np.savetxt('regular_sampling.txt', regular_timeseries, header='time', fmt='%10.10f')
     np.savetxt('random_sampling.txt', random_timeseries, header='time', fmt='%10.10f')
-    np.savetxt('realistic_sampling.txt', time_series, header='time', fmt='%10.10f')
+    np.savetxt('irregular_sampling.txt', time_series, header='time', fmt='%10.10f')
 
 
 

@@ -101,7 +101,7 @@ def get_data_from_file(filename):
     else:
         data = ds.data()
         errors = ds.errors()
-    return ds.timeseries(), data, errors
+    return ds.timeseries(), data, np.abs(errors)
 
 
 def create_phase(time_series, period, epoch):
@@ -578,7 +578,7 @@ def autocol_and_phase_folds(file, num_phase_plots=5, do_remove_transit=False, kn
 
     logger.info('periods before pruning: {}'.format([periods[index] for index in indexes]))
 
-    indexes = [index for index in indexes if periods[index] > 1 and index != 1]  # prune short periods & last point
+    # indexes = [index for index in indexes if periods[index] > 1 and index != 1]  # prune short periods & last point
     indexes = [index for index in indexes if periods[index] < 0.5 * (time_series[-1] - time_series[0])]
     signal_to_noise = None
     # prune periods more than half the time series
@@ -680,7 +680,11 @@ def find_noise_level(file, no_samples=10, **kwargs):
     #
     # generated_correlations = np.empty(shape=(no_samples, len(lag_timeseries)))
 
-    generated_correlations, _ = find_correlation_from_lists(time_series, generated_data)
+    max_lag = kwargs['max_lag'] if 'max_lag' in kwargs else None
+    lag_resolution = kwargs['lag_resolution'] if 'lag_resolution' in kwargs else None
+
+    generated_correlations, _ = find_correlation_from_lists(time_series, generated_data,
+                                                            max_lag=max_lag, lag_resolution=lag_resolution)
     lag_timeseries = generated_correlations['lag_timeseries']
     generated_correlations = np.array(generated_correlations['correlations'])
 
@@ -755,7 +759,7 @@ def find_noise_level(file, no_samples=10, **kwargs):
     # std_dev_from_median = np.array([gen_ft - gen_ft_dict['median'][i] for i, gen_ft in enumerate(gen_ft_above_median)])
     # five_sigma = np.multiply(5.0, [np.mean(std_dev) for std_dev in std_dev_from_median])
 
-    five_sigma = np.multiply(gen_ft_dict['max'], 5.0 / 3.0)  # multiply 3-sigma threshold by 5/3 to get 5 sigma
+    five_sigma = np.multiply(gen_ft_dict['max'], 3.0 / 3.0)  # multiply 3-sigma threshold by 5/3 to get 5 sigma
 
     # fig, ax = plt.subplots()
     #
@@ -845,13 +849,14 @@ if __name__ == '__main__':
     logger.addHandler(sh)
     logger.setLevel(logging.INFO)
 
-    file_location = '/Users/joshbriegal/GitHub/GACF/example/files/'
+    file_location = '/Users/joshbriegal/GitHub/GACF/example/RichardWork/'
     files = os.listdir(file_location)
 
     # filter files
-    files = [file_location + f for f in files if ('tbin' in f and 'NG2331' in f)]
+    # files = [file_location + f for f in files]# if ('tbin' in f and 'NG2331' in f)]
     # logger.info('Running on files: \n{}'.format('\n'.join(files)))
-    # files = ['/Users/joshbriegal/GitHub/GACF/example/files/NG0612-2518_044284_LC_tbin=10min.dat']
+    files = ['/Users/joshbriegal/GitHub/GACF/example/Sp1003-0105_6globalbinned.csv']
+    # files = ['/Users/joshbriegal/GitHub/GACF/example/RichardWork']
     pool = mp.Pool(processes=mp.cpu_count())
 
     # noise_thresholds = [None for i in range(len(files))]
