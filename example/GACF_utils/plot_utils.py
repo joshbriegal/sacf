@@ -71,8 +71,7 @@ def autocorrelation_plots(data_timeseries, data_values, correlation_timeseries, 
 
 
 def save_autocorrelation_plots(data_timeseries, data_values, correlation_timeseries, correlation_values,
-                               fft_periods, fft_data, fft_indexes, filename, max_peak=None, zoom_plots=True,
-                               running_max_peak=None):
+                               fft_periods, fft_data, fft_indexes, filename, max_peak=None, running_max_peak=None):
     fig, axs = autocorrelation_plots(data_timeseries, data_values, correlation_timeseries, correlation_values,
                                      fft_periods, fft_data, fft_indexes, max_peak=max_peak,
                                      running_max_peak=running_max_peak)
@@ -171,7 +170,7 @@ def create_fourier_transform_animation(correlation_timeseries, correlation_data,
     plt.close(fig)
 
 
-def save_phase_plot(timeseries, period, epoch, data, filename, peak_percentage=None):
+def save_phase_plot(timeseries, period, epoch, data, filename, signal_to_noise=None):
     phase_app, data_app = append_to_phase(create_phase(timeseries, period, epoch), data)
 
     binned_phase_app, binned_data_app = bin_phase_curve(phase_app, data_app)
@@ -181,10 +180,10 @@ def save_phase_plot(timeseries, period, epoch, data, filename, peak_percentage=N
     ax.scatter(phase_app, data_app, s=0.1)
     ax.scatter(binned_phase_app, binned_data_app, s=5, c='r')
 
-    if peak_percentage is None:
-        ax.set_title('Data phase folded on {0} day period'.format(period))
+    if signal_to_noise is None:
+        ax.set_title('Data phase folded on {} day period'.format(period))
     else:
-        ax.set_title('Data phase folded on {0} day period. {1:.1%} of max signal.'.format(period, peak_percentage))
+        ax.set_title('Data phase folded on {} day period. Signal to noise of {}.'.format(period, signal_to_noise))
 
     ax.axvline(x=0, lw=0.1, c='k', ls='--')
     ax.axvline(x=1, lw=0.1, c='k', ls='--')

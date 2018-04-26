@@ -94,7 +94,7 @@ def sigma_level_to_samples(sigma_level=None, samples=None):
         return None
 
 
-def get_noise_level(time_series, generated_data, sigma_level_calc=3, sigma_level_out=5, logger=None):
+def calculate_noise_level(time_series, generated_data, sigma_level_calc=3, sigma_level_out=5, logger=None):
     sigma_multiplication_factor = float(sigma_level_out) / float(sigma_level_calc)
     no_samples = sigma_level_to_samples(sigma_level=sigma_level_calc)
 
