@@ -211,13 +211,13 @@ class Field(object):
 if __name__ == '__main__':
     # from time import time
     #
-    # field = Field('NG2331-3922', nObj=10)
+    field = Field('NG2331-3922', nObj=10, root_file='/data/jtb34/')
     # field2 = Field('NG2331-3922', nObj=10)
     # obj_JJ = NGTSObject(obj=9138, field='NG2331-3922', test='CYCLE1706')
     # obj_JJ.get_binned_data()
     #
     # start = time()
-    # field.get_object_lc_multi(delete_unbinned=False)
+    # field.get_object_lc(delete_unbinned=True)
     # end = time()
     # field2.get_object_lc(delete_unbinned=False)
     # end2 = time()
@@ -225,8 +225,21 @@ if __name__ == '__main__':
     # print "Time get object lc multi: {}".format(end - start)
     # print "Time get object lc: {}".format(end2 - end)
 
-    field = return_field_from_json_str(open('field.json', 'r').read())
-    field.save_object_plots_and_objects()
-    field.plot_objects_vs_period()
+    # field = return_field_from_json_str(open('field.json', 'r').read())
+    # field.calculate_periods_from_autocorrelation()
+    # field.save_object_plots_and_objects()
+    # field.plot_objects_vs_period()
+    for obj in field:
+        if obj.obj == "000334":
+            print "\t\t *** Processing", obj, " ***\n"
+            obj.get_binned_data()
+            obj.calculate_noise_threshold()
+            obj.calculate_periods_from_autocorrelation()
+            obj.plot_data_autocol_ft()
+            obj.plot_autocol()
+            obj.plot_ft()
+            obj.plot_phase_folded_lcs()
+            obj.save_and_log_object()
+            print "\t\t *** ", obj, "Processed *** \n"
 
     # field.pickle_field()
