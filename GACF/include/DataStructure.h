@@ -50,7 +50,7 @@ public:
     explicit DataStructure(std::vector<double>*, std::vector< std::vector<double> >*,
                            std::vector< std::vector<double> >*);
 
-//    ~DataStructure();
+    ~DataStructure();
 
     // indexing function
     long getVectorIndex(int i, int j);

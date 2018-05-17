@@ -13,9 +13,12 @@ from GACF_utils import get_ngts_data, ClassEncoder, NGTSObjectDecoder
 import json
 import matplotlib.pyplot as plt
 import numpy as np
+import logging
+import re
+import matplotlib as mpl
 
 
-def worker(arg):
+def get_data_worker(arg):
     """
     Used for multiprocessing of reading output data from NGTSio
     :param arg: Tuple (object, NGTSio output dictionary, bin, delete_unbinned)
@@ -23,8 +26,25 @@ def worker(arg):
     """
     obj, dic, bin, delete_unbinned = arg
     obj.get_data_from_dict(dic)
+    if not obj.ok:
+        obj = None
+        return obj
     if bin:
         obj.bin_data(delete_unbinned=delete_unbinned)
+    return obj
+
+def object_call_worker(arg):
+    """
+    Used for multiprocessing of reading output data from NGTSio and calculating periods
+    :param arg: Tuple (object, NGTSio output dictionary, bin, delete_unbinned)
+    :return: None
+    """
+    obj = get_data_worker(arg)
+    if obj is None:
+        return obj
+    else:
+        obj.calculate_periods_from_autocorrelation(calculate_noise_threshold=True)
+        obj.save_and_log_object(clear_unneeded_data=True)
     return obj
 
 
@@ -44,13 +64,48 @@ def return_field_from_json_str(json_str):
     tfield.__dict__ = dic
     return tfield
 
+def return_field_from_object_directory(root_directory, fieldname, test=None):
+    if os.path.exists(os.path.join(root_directory, fieldname)):
+        filename = os.path.join(root_directory, fieldname)
+    else:
+        filename = root_directory
+    field = Field(fieldname=fieldname, root_file=root_directory, nObj=0, test=test)
+
+    object_file_pattern = re.compile(r'^(?P<obj>\d)+_VERSION_(?P<test>.+?)$')
+    object_json_filename = 'object.json'
+    for i, obj_file in enumerate(os.listdir(filename)):
+        match = object_file_pattern.search(obj_file)
+        if match is not None:
+            try:
+                obj_id = match.group('obj')
+                test = match.group('test')
+                if i == 0:
+                    field.test = test
+                if test != field.test:
+                    continue
+            except KeyError:
+                continue
+            obj_file = os.path.join(filename, obj_file)
+            if object_json_filename in os.listdir(obj_file):
+                with open(os.path.join(obj_file, object_json_filename), 'r') as jso:
+                    obj = return_object_from_json_string(jso.read())
+                    obj.remove_logger()
+                    field.objects.append(obj)
+                    obj = None
+                    jso.close()
+            else:
+                continue
+    field.num_objects = len(field.objects)
+    return field
+
 
 class Field(object):
 
-    def __init__(self, fieldname, test="CYCLE1706", root_file=None, nObj=None, initialise_objects=True):
+    def __init__(self, fieldname, test="CYCLE1706", root_file=None, nObj=None, object_list=None,
+                 initialise_objects=True, log_to_console=False):
         self.fieldname = fieldname
         self.test = test
-        self.object_list = None
+        self.object_list = object_list
         self.num_objects = None
         self.objects = []
         self.filename = os.path.join(os.getcwd() if root_file is None else root_file, self.fieldname)
@@ -60,6 +115,8 @@ class Field(object):
             self.get_objects(initialise_objects=initialise_objects, nObj=nObj)
         except TypeError:
             pass
+
+        self.create_logger(to_console=log_to_console)
 
     def __str__(self):
         return "NGTS Field " + self.fieldname
@@ -84,13 +141,47 @@ class Field(object):
 
     next = __next__
 
+    def __call__(self, bin=True, delete_unbinned=True):
+        if len(self.objects) == 0:
+            self.initialise_objects()
+        dic = get_ngts_data(fieldname=self.fieldname, obj_id=self.object_list, ngts_version=self.test, return_dic=True)
+        pool = Pool(cpu_count())
+        objects = pool.imap(object_call_worker, [(obj, deepcopy(dic), bin, delete_unbinned) for obj in self.objects])
+        # for o in self.objects:
+            # self.logger.info("\t\t *** Processing {} ***".format(o))
+            # object_call_worker((o, dic, bin, delete_unbinned))
+        pool.close()
+        pool.join()
+        try:
+            self.objects = [obj for obj in objects if obj is not None]
+        except TypeError:
+            self.objects = list(objects)
+        self.num_objects = len(self.objects)
+        # self.plot_objects_vs_period()
+        
+
+    def create_logger(self, logger=None, to_console=False):
+        if logger is None:
+            fh = logging.FileHandler(os.path.join(self.filename, 'Log.txt'), 'w')
+            fh.setFormatter(logging.Formatter())  # default formatter
+            logger = logging.getLogger(str(self))
+            logger.addHandler(fh)
+            if to_console:
+                sh = logging.StreamHandler()
+                sh.setFormatter(logging.Formatter())
+                logger.addHandler(sh)
+            logger.setLevel(logging.INFO)
+        self.logger = logger
+        return
+
     def remove_bad_objects(self):
         self.objects = [obj for obj in self.objects if obj.ok]
         self.num_objects = len(self.objects)
 
-    def get_objects(self, initialise_objects=True, nObj=None, **kwargs):
-        dic = ngtsio.get(self.fieldname, self.test, ["OBJ_ID"], silent=True)
-        self.object_list = dic["OBJ_ID"] if nObj is None else dic["OBJ_ID"][:nObj]
+    def get_objects(self, initialise_objects=True, nObj=None, override_object_list=False, **kwargs):
+        if self.object_list is None or override_object_list:
+            dic = ngtsio.get(self.fieldname, self.test, ["OBJ_ID"], silent=True)
+            self.object_list = dic["OBJ_ID"] if nObj is None else dic["OBJ_ID"][:nObj]
         self.num_objects = len(self.object_list)
         if initialise_objects:
             self.initialise_objects(*kwargs)
@@ -123,7 +214,7 @@ class Field(object):
         obj_ids is None else obj_ids, ngts_version=self.test, return_dic=True)
         if use_multiprocessing:
             pool = Pool(cpu_count())
-            self.objects = list(pool.map(worker, [(obj, deepcopy(dic), bin, delete_unbinned) for obj in self.objects]))
+            self.objects = list(pool.map(get_data_worker, [(obj, deepcopy(dic), bin, delete_unbinned) for obj in self.objects]))
             pool.close()
             pool.join()
         else:
@@ -163,32 +254,61 @@ class Field(object):
         if calculate:
             self.calculate_periods_from_autocorrelation(calculate_noise=signal_to_noise)
         if fig_ax_tuple is None:
-            fig, ax = plt.subplots()
+            fig, ax = plt.subplots(figsize=(12, 8))
         else:
             fig, ax = fig_ax_tuple
 
+        max_signal_to_noise = max([max(obj.peak_signal_to_noise) for obj in self if np.array(obj.peak_signal_to_noise).size > 0])
+        min_signal_to_noise = min([min(obj.peak_signal_to_noise) for obj in self if np.array(obj.peak_signal_to_noise).size > 0])
+        min_obj_id = np.inf
+        max_obj_id = 0
+
+        if fig_ax_tuple is None:
+            axc = fig.add_axes([0.95, 0.1, 0.01, 0.8])
+            norm = mpl.colors.Normalize(vmin=1, vmax=max_signal_to_noise)
+            cb = mpl.colorbar.ColorbarBase(axc, norm=norm, cmap=mpl.cm.viridis, orientation='vertical')
+            cb.set_clim(vmin=1, vmax=max_signal_to_noise)
+            cb.set_label("Signal to Noise")
+        
         for i, obj in enumerate(self):
             periods = obj.periods
-            size = obj.peak_signal_to_noise
-            y = np.linspace(i, i, len(periods))
-            ax.scatter(periods, y, s=size, c='k')
+            color = obj.peak_signal_to_noise
 
+            obj_id = int(obj.obj)
+            if obj_id > max_obj_id:
+                max_obj_id = obj_id
+            elif obj_id < min_obj_id:
+                min_obj_id = obj_id
+
+            if np.array(color).size > 0:
+                size = np.interp(color, (min_signal_to_noise, max_signal_to_noise), (0.1, 20))
+            else:
+                size = color
+            y = np.linspace(obj_id, obj_id, len(periods))
+            # ax.scatter(periods, y, s=size, c='k')
+            ax.scatter(periods, y, c=color, cmap=mpl.cm.viridis, s=size, norm=norm)
+            
         if fig_ax_tuple is None:
             ax.set_ylabel('Object no.')
             ax.set_xlabel('Period (days)')
             ax.set_xscale('log')
-            ax.xaxis.grid(True, linestyle='--', alpha=0.5, which='both', lw=0.1)
+            ax.xaxis.grid(True, linestyle='--', alpha=0.5, which='both', lw=1)
             ax.set_xlim(left=0)
+            ax.set_ylim([min_obj_id*0.8, max_obj_id + (min_obj_id*0.2)])
             ax.set_title('Objects in Field {} and GACF periods'.format(self.fieldname))
-            ax.set_yticks(np.linspace(0, self.num_objects - 1, self.num_objects))
-            ax.set_yticklabels(['obj_id {}'.format(obj.obj) for obj in self], fontdict={'fontsize': 6})
+            # ax.set_yticks(np.linspace(0, self.num_objects - 1, self.num_objects))
+            # ax.set_yticklabels(['obj_id {}'.format(obj.obj) for obj in self], fontdict={'fontsize': 6})
 
-        ax.set_yticks(np.append(ax.get_yticks(), np.linspace(0, self.num_objects - 1, self.num_objects)))
-        ax.set_yticklabels(np.append(ax.get_yticklabels()[1], ['obj_id {}'.format(obj.obj) for obj in self]),
-                           fontdict={'fontsize': 6})
+            
+
+            # ax.set_facecolor('lightgray')
+
+            # ax.set_yticks(np.append(ax.get_yticks(), np.linspace(0, self.num_objects - 1, self.num_objects)))
+            # ax.set_yticklabels(np.append(ax.get_yticklabels()[1], ['obj_id {}'.format(obj.obj) for obj in self]),
+                               # fontdict={'fontsize': 6})
 
         if save_if_true_else_return:
-            fig.savefig(os.path.join(self.filename, 'Objects vs Period.pdf'))
+            fig.savefig(os.path.join(self.filename, 'Objects vs Period.png'))
             plt.close(fig)
             return
         else:
@@ -205,19 +325,69 @@ class Field(object):
                 self.objects[i] = None
 
         self.objects = [obj for obj in self.objects if obj is not None]
+        self.num_objects = len(self.objects)
 
+    def save_field(self):
+        self.logger = None  # to allow JSON serialisation must remove logger
+        jsf = field.field_to_json()
+        json_file = open(os.path.join(field.filename, 'field.json'), 'w')
+        json_file.write(jsf)
+        json_file.close()
+
+    def return_object_periods_dict(self):
+        periods_dict = {}
+        for obj in self:
+            out_dict = {"periods": obj.periods, "signal_to_noise": obj.peak_signal_to_noise}
+            periods_dict[str(obj)] = out_dict
+        return periods_dict
+            
+
+
+def chunk_list(big_list, small_list_size):
+    for i in range(0, len(big_list), small_list_size):
+        yield big_list[i:i+small_list_size]
 
 
 if __name__ == '__main__':
     # from time import time
     #
-    field = Field('NG2331-3922', nObj=10, root_file='/data/jtb34/')
+
+    dic_file = open('/data/jtb34/output_dictionary.dat','w')
+
+    field = Field('NG2331-3922', root_file='/data/jtb34/', log_to_console=True)
+    object_list = field.object_list
+
+    # get already processed objects
+    f = open('already_processed.txt', 'r')
+    obj_str = f.read()
+    f.close()
+
+    processed = obj_str.split(',')
+    
+    object_list = [o for o in object_list if o not in processed]
+
+    period_dict = {}
+    
+    # batch objects within field to prevent memory overflow    
+    
+    for object_sublist in chunk_list(object_list, 50):
+        print "start", object_sublist
+        field = Field('NG2331-3922', root_file='/data/jtb34', log_to_console=True, object_list=object_sublist)
+        print "in object", field.object_list, field.objects
+        field()
+        period_dict.update(field.return_object_periods_dict())
+        
+    
+    dic_file.write(str(period_dict))
+
+
+    # field.save_field()
     # field2 = Field('NG2331-3922', nObj=10)
     # obj_JJ = NGTSObject(obj=9138, field='NG2331-3922', test='CYCLE1706')
     # obj_JJ.get_binned_data()
     #
     # start = time()
-    # field.get_object_lc(delete_unbinned=True)
+    # field.get_object_lc_multi(delete_unbinned=True)
     # end = time()
     # field2.get_object_lc(delete_unbinned=False)
     # end2 = time()
@@ -229,17 +399,24 @@ if __name__ == '__main__':
     # field.calculate_periods_from_autocorrelation()
     # field.save_object_plots_and_objects()
     # field.plot_objects_vs_period()
-    for obj in field:
-        if obj.obj == "000334":
-            print "\t\t *** Processing", obj, " ***\n"
-            obj.get_binned_data()
-            obj.calculate_noise_threshold()
-            obj.calculate_periods_from_autocorrelation()
-            obj.plot_data_autocol_ft()
-            obj.plot_autocol()
-            obj.plot_ft()
-            obj.plot_phase_folded_lcs()
-            obj.save_and_log_object()
-            print "\t\t *** ", obj, "Processed *** \n"
+    # for obj in field:
+        # if obj in ["000334", "000321"]:
+            # print "\t\t *** Processing", obj, " ***\n"
+            # obj.get_binned_data()
+#            obj.calculate_noise_threshold()
+            # obj.calculate_periods_from_autocorrelation()
+            # obj.plot_data_autocol_ft()
+            # obj.plot_autocol()
+            # obj.plot_ft()
+            # obj.plot_phase_folded_lcs()
+            # obj.save_and_log_object()
+            # print "\t\t *** ", obj, "Processed *** \n"
+
+    # field.objects = [obj for obj in field if obj.num_observations_binned is not None]
+    # # print "updating", field[1], " timeseries_binned"
+    # # field[1].timeseries_binned = field[0].timeseries_binned[:field[1].num_observations_binned]
+    # # field[1].flux_binned = field[0].flux_binned[:field[1].num_observations_binned]
+    # field[1].calculate_autocorrelation()
+
 
     # field.pickle_field()

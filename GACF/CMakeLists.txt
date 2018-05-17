@@ -20,5 +20,7 @@ if(CMAKE_COMPILER_IS_GNUCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.7)
 
 endif()
 
+set(CMAKE_BUILD_TYPE Debug)
+
 pybind11_add_module(datastructure ${DATASTRUCTURE})
 pybind11_add_module(correlator ${CORRELATOR})
