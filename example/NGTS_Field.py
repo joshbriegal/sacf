@@ -329,8 +329,8 @@ class Field(object):
 
     def save_field(self):
         self.logger = None  # to allow JSON serialisation must remove logger
-        jsf = field.field_to_json()
-        json_file = open(os.path.join(field.filename, 'field.json'), 'w')
+        jsf = self.field_to_json()
+        json_file = open(os.path.join(self.filename, 'field.json'), 'w')
         json_file.write(jsf)
         json_file.close()
 
