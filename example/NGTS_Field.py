@@ -1,8 +1,15 @@
 """
 PyObject per NGTS field which contains a list of NGTS objects & associated PyObjects
 """
+import warnings
 
-from ngtsio import ngtsio
+try:
+    from ngtsio import ngtsio
+
+    ngtsio_import = True
+except ImportError:
+    warnings.warn("ngtsio not imported")
+    ngtsio_import = False
 from NGTS_Object import NGTSObject, return_object_from_json_string
 from tqdm import tqdm
 from multiprocessing import Pool, cpu_count
@@ -179,6 +186,8 @@ class Field(object):
         self.num_objects = len(self.objects)
 
     def get_objects(self, initialise_objects=True, nObj=None, override_object_list=False, **kwargs):
+        if not ngtsio_import or nObj == 0:
+            return
         if self.object_list is None or override_object_list:
             dic = ngtsio.get(self.fieldname, self.test, ["OBJ_ID"], silent=True)
             self.object_list = dic["OBJ_ID"] if nObj is None else dic["OBJ_ID"][:nObj]
@@ -250,7 +259,7 @@ class Field(object):
         return
 
     def plot_objects_vs_period(self, calculate=False, signal_to_noise=False, fig_ax_tuple=None,
-                               save_if_true_else_return=True):
+                               save_if_true_else_return=True, interactive=False):
         if calculate:
             self.calculate_periods_from_autocorrelation(calculate_noise=signal_to_noise)
         if fig_ax_tuple is None:
@@ -264,10 +273,12 @@ class Field(object):
         max_obj_id = 0
 
         if fig_ax_tuple is None:
+            c_min = 1
+            c_max = 2  # max_signal_to_noise
             axc = fig.add_axes([0.95, 0.1, 0.01, 0.8])
-            norm = mpl.colors.Normalize(vmin=1, vmax=max_signal_to_noise)
+            norm = mpl.colors.Normalize(vmin=c_min, vmax=c_max)
             cb = mpl.colorbar.ColorbarBase(axc, norm=norm, cmap=mpl.cm.viridis, orientation='vertical')
-            cb.set_clim(vmin=1, vmax=max_signal_to_noise)
+            cb.set_clim(vmin=c_min, vmax=c_max)
             cb.set_label("Signal to Noise")
         
         for i, obj in enumerate(self):
@@ -308,9 +319,12 @@ class Field(object):
                                # fontdict={'fontsize': 6})
 
         if save_if_true_else_return:
-            fig.savefig(os.path.join(self.filename, 'Objects vs Period.png'))
-            plt.close(fig)
-            return
+            if interactive:
+                plt.show()
+            else:
+                fig.savefig(os.path.join(self.filename, 'Objects vs Period.png'))
+                plt.close(fig)
+                return
         else:
             return fig, ax
 

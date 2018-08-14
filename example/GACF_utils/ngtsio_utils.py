@@ -1,6 +1,11 @@
 import numpy as np
 import scipy as sp
-from ngtsio import ngtsio
+import warnings
+
+try:
+    from ngtsio import ngtsio
+except ImportError:
+    warnings.warn("ngtsio not imported")
 
 TIME_CONVERSIONS = dict(d2s=24. * 60. * 60.,
                         d2m=24. * 60.,

@@ -71,16 +71,21 @@ def autocorrelation_plots(data_timeseries, data_values, correlation_timeseries, 
 
 
 def save_autocorrelation_plots(data_timeseries, data_values, correlation_timeseries, correlation_values,
-                               fft_periods, fft_data, fft_indexes, filename, max_peak=None, running_max_peak=None):
+                               fft_periods, fft_data, fft_indexes, filename, max_peak=None, running_max_peak=None,
+                               fft_periods, fft_data, fft_indexes, filename, max_peak=None, running_max_peak=None,
+                               interactive=False):
     fig, axs = autocorrelation_plots(data_timeseries, data_values, correlation_timeseries, correlation_values,
                                      fft_periods, fft_data, fft_indexes, max_peak=max_peak,
                                      running_max_peak=running_max_peak)
-    fig.savefig(filename)
-    plt.close(fig)
+    if interactive:
+        plt.show()
+    else:
+        fig.savefig(filename)
+        plt.close(fig)
 
 
 def save_autocorrelation_plots_multi(data_timeseries, data_values, correlation_timeseries, correlation_values,
-                                     fft_periods, fft_data, fft_indexes, filename, max_peak):
+                                     fft_periods, fft_data, fft_indexes, filename, max_peak, interactive=False):
     fig, axs = None, []
     if isinstance(data_values, dict):
         fig, ax = autocorrelation_plots(data_timeseries, data_values, correlation_timeseries, correlation_values,
@@ -94,13 +99,16 @@ def save_autocorrelation_plots_multi(data_timeseries, data_values, correlation_t
             else:
                 _, _ = autocorrelation_plots(data_timeseries, data, correlation_timeseries, correlation_values[i],
                                              fft_periods[i], fft_data[i], fft_indexes[i], fig, axs, peaks=False)
+    if interactive:
+        plt.show()
+    else:
+        fig.savefig(filename + '/autocorrelation.pdf')
 
-    fig.savefig(filename + '/autocorrelation.pdf')
-
-    plt.close(fig)
+        plt.close(fig)
 
 
-def create_fourier_transform_animation(correlation_timeseries, correlation_data, filename, num_FT_steps=50):
+def create_fourier_transform_animation(correlation_timeseries, correlation_data, filename, num_FT_steps=50,
+                                       interactive=False):
     from tqdm import tqdm
     import numpy as np
     import matplotlib.pyplot as plt
@@ -164,13 +172,15 @@ def create_fourier_transform_animation(correlation_timeseries, correlation_data,
     fig.tight_layout()
 
     ani = animation.FuncAnimation(fig, animate, np.arange(1, num_FT_steps), blit=False)
+    if interactive:
+        plt.show()
+    else:
+        ani.save(filename, dpi=80, writer='imagemagick')
 
-    ani.save(filename, dpi=80, writer='imagemagick')
-
-    plt.close(fig)
+        plt.close(fig)
 
 
-def save_phase_plot(timeseries, period, epoch, data, filename, signal_to_noise=None):
+def save_phase_plot(timeseries, period, epoch, data, filename, signal_to_noise=None, interactive=False):
     phase_app, data_app = append_to_phase(create_phase(timeseries, period, epoch), data)
 
     binned_phase_app, binned_data_app = bin_phase_curve(phase_app, data_app)
@@ -188,12 +198,15 @@ def save_phase_plot(timeseries, period, epoch, data, filename, signal_to_noise=N
     ax.axvline(x=0, lw=0.1, c='k', ls='--')
     ax.axvline(x=1, lw=0.1, c='k', ls='--')
 
-    fig.savefig(filename)
+    if interactive:
+        plt.show()
+    else:
+        fig.savefig(filename)
 
-    plt.close(fig)
+        plt.close(fig)
 
 
-def save_data_plot(timeseries, data, filename):
+def save_data_plot(timeseries, data, filename, interactive=False):
     fig, ax = plt.subplots()
 
     ax.scatter(timeseries, data, s=0.1)
@@ -201,24 +214,30 @@ def save_data_plot(timeseries, data, filename):
     ax.set_xlabel('Time (days)')
     ax.set_ylabel('Flux')
 
-    fig.savefig(filename)
+    if interactive:
+        plt.show()
+    else:
+        fig.savefig(filename)
 
-    plt.close(fig)
+        plt.close(fig)
 
 
-def save_autocorrelation_plot(correlation_timeseries, correlation_values, filename):
+def save_autocorrelation_plot(correlation_timeseries, correlation_values, filename, interactive=False):
     fig, ax = plt.subplots()
 
     ax.plot(correlation_timeseries, correlation_values)
     ax.set_title('Autocorrelation function')
     ax.set_ylabel('Correlation')
     ax.set_xlabel('Lag Time (days)')
+    if interactive:
+        plt.show()
+    else:
+        fig.savefig(filename)
+        plt.close(fig)
 
-    fig.savefig(filename)
-    plt.close(fig)
 
-
-def save_ft_plt(fft_periods, fft_data, fft_indexes, filename, noise_threshold=None, running_noise_threshold=None):
+def save_ft_plt(fft_periods, fft_data, fft_indexes, filename, noise_threshold=None, running_noise_threshold=None,
+                interactive=False):
     fig, ax = plt.subplots()
 
     ax.set_xscale('log')
@@ -234,5 +253,8 @@ def save_ft_plt(fft_periods, fft_data, fft_indexes, filename, noise_threshold=No
     ax.set_title('FFT with peak detection')
     ax.set_xlim(xmin=0)
 
-    fig.savefig(filename)
-    plt.close(fig)
+    if interactive:
+        plt.show()
+    else:
+        fig.savefig(filename)
+        plt.close(fig)
