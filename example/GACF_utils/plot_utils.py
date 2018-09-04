@@ -72,7 +72,6 @@ def autocorrelation_plots(data_timeseries, data_values, correlation_timeseries, 
 
 def save_autocorrelation_plots(data_timeseries, data_values, correlation_timeseries, correlation_values,
                                fft_periods, fft_data, fft_indexes, filename, max_peak=None, running_max_peak=None,
-                               fft_periods, fft_data, fft_indexes, filename, max_peak=None, running_max_peak=None,
                                interactive=False):
     fig, axs = autocorrelation_plots(data_timeseries, data_values, correlation_timeseries, correlation_values,
                                      fft_periods, fft_data, fft_indexes, max_peak=max_peak,

@@ -16,7 +16,7 @@ from multiprocessing import Pool, cpu_count
 import pickle
 from copy import deepcopy
 import os
-from GACF_utils import get_ngts_data, ClassEncoder, NGTSObjectDecoder
+from GACF_utils import get_ngts_data, ClassEncoder, NGTSObjectDecoder, pop_dict_item
 import json
 import matplotlib.pyplot as plt
 import numpy as np
@@ -112,9 +112,9 @@ class Field(object):
                  initialise_objects=True, log_to_console=False):
         self.fieldname = fieldname
         self.test = test
-        self.object_list = object_list
+        self.object_list = [int(id) for id in object_list]
         self.num_objects = None
-        self.objects = []
+        self.objects = {}
         self.filename = os.path.join(os.getcwd() if root_file is None else root_file, self.fieldname)
         if not os.path.exists(self.filename):
             os.makedirs(self.filename)
@@ -131,40 +131,43 @@ class Field(object):
     def __repr__(self):
         return self.__str__()
 
-    def __getitem__(self, i):
-        return self.objects[i]
-
+    def __getitem__(self, obj_id):
+        return self.objects[obj_id]
+    
     def __iter__(self):
-        self.it = 0
-        return self
+        return self.objects.itervalues()
 
-    def __next__(self):
-        if self.it < self.num_objects:
-            obj = self.objects[self.it]
-            self.it += 1
-            return obj
-        else:
-            raise StopIteration
+    #     def __iter__(self):
+    #         self.it = 0
+    #         return self
 
-    next = __next__
+    #     def __next__(self):
+    #         if self.it < self.num_objects:
+    #             obj = self.objects[self.it]
+    #             self.it += 1
+    #             return obj
+    #         else:
+    #             raise StopIteration
 
-    def __call__(self, bin=True, delete_unbinned=True):
-        if len(self.objects) == 0:
-            self.initialise_objects()
-        dic = get_ngts_data(fieldname=self.fieldname, obj_id=self.object_list, ngts_version=self.test, return_dic=True)
-        pool = Pool(cpu_count())
-        objects = pool.imap(object_call_worker, [(obj, deepcopy(dic), bin, delete_unbinned) for obj in self.objects])
-        # for o in self.objects:
-            # self.logger.info("\t\t *** Processing {} ***".format(o))
-            # object_call_worker((o, dic, bin, delete_unbinned))
-        pool.close()
-        pool.join()
-        try:
-            self.objects = [obj for obj in objects if obj is not None]
-        except TypeError:
-            self.objects = list(objects)
-        self.num_objects = len(self.objects)
-        # self.plot_objects_vs_period()
+    #     next = __next__
+
+    #     def __call__(self, bin=True, delete_unbinned=True):
+    #         if len(self.objects) == 0:
+    #             self.initialise_objects()
+    #         dic = get_ngts_data(fieldname=self.fieldname, obj_id=self.object_list, ngts_version=self.test, return_dic=True)
+    #         pool = Pool(cpu_count())
+    #         objects = pool.imap(object_call_worker, [(obj, deepcopy(dic), bin, delete_unbinned) for obj in self.objects])
+    #         # for o in self.objects:
+    #             # self.logger.info("\t\t *** Processing {} ***".format(o))
+    #             # object_call_worker((o, dic, bin, delete_unbinned))
+    #         pool.close()
+    #         pool.join()
+    #         try:
+    #             self.objects = [obj for obj in objects if obj is not None]
+    #         except TypeError:
+    #             self.objects = list(objects)
+    #         self.num_objects = len(self.objects)
+    #         # self.plot_objects_vs_period()
         
 
     def create_logger(self, logger=None, to_console=False):
@@ -182,7 +185,7 @@ class Field(object):
         return
 
     def remove_bad_objects(self):
-        self.objects = [obj for obj in self.objects if obj.ok]
+        self.objects = {k: obj for k, obj in self.objects.iteritems() if obj is not None and obj.ok}
         self.num_objects = len(self.objects)
 
     def get_objects(self, initialise_objects=True, nObj=None, override_object_list=False, **kwargs):
@@ -190,7 +193,7 @@ class Field(object):
             return
         if self.object_list is None or override_object_list:
             dic = ngtsio.get(self.fieldname, self.test, ["OBJ_ID"], silent=True)
-            self.object_list = dic["OBJ_ID"] if nObj is None else dic["OBJ_ID"][:nObj]
+            self.object_list = [int(id) for id in (dic["OBJ_ID"] if nObj is None else dic["OBJ_ID"][:nObj])]
         self.num_objects = len(self.object_list)
         if initialise_objects:
             self.initialise_objects(*kwargs)
@@ -200,38 +203,71 @@ class Field(object):
         if self.object_list is None:
             raise ValueError("No object list to initialise from")
         for obj_id in self.object_list:
-            self.objects.append(NGTSObject(obj=obj_id, field=self.fieldname, test=self.test,
-                                           field_filename=self.filename, *kwargs))
+            self.objects[obj_id] = NGTSObject(obj=obj_id, field=self.fieldname, test=self.test,
+                                              field_filename=self.filename, *kwargs)
+        self.num_objects = len(self.objects)
         return
 
     def get_object_lc(self, obj_ids=None, bin=True, delete_unbinned=True):
 
         if len(self.objects) == 0:
             self.initialise_objects()
-        for obj in tqdm(self.objects if obj_ids is None else [o for o in self.objects if o in obj_ids]):
+        for obj in tqdm(self if obj_ids is None else [o for o in self if o in obj_ids]):
             if bin:
                 obj.get_binned_data(delete_unbinned=delete_unbinned)
             else:
                 obj.get_data()
         self.remove_bad_objects()
 
-    def get_object_lc_multi(self, obj_ids=None, bin=True, delete_unbinned=True, use_multiprocessing=True):
-
+    def get_object_lc_bulk(self, obj_ids=None, bin=True, delete_unbinned=True):
+        
         if len(self.objects) == 0:
             self.initialise_objects()
-        dic = get_ngts_data(fieldname=self.fieldname, obj_id=self.object_list if
-        obj_ids is None else obj_ids, ngts_version=self.test, return_dic=True)
-        if use_multiprocessing:
-            pool = Pool(cpu_count())
-            self.objects = list(pool.map(get_data_worker, [(obj, deepcopy(dic), bin, delete_unbinned) for obj in self.objects]))
-            pool.close()
-            pool.join()
+        obj_ids = self.object_list if obj_ids is None else obj_ids
+        dic = get_ngts_data(fieldname=self.fieldname, obj_id=obj_ids, ngts_version=self.test, return_dic=True)
+        if len(obj_ids) <= 1:
+            obj_id = int(dic['OBJ_ID'])
+            try:
+                self[obj_id].get_data_from_dict(dic)
+            except KeyError:
+                warnings.warn('No data found for object {}'.format(obj_id))
+            if bin:
+                self[obj_id].bin_data(delete_unbinned=delete_unbinned)
         else:
-            for obj in self.objects:
-                obj.get_data_from_dict(dic)
+            for i in range(self.num_objects):
+                obj_data, dic = pop_dict_item(dic)
+                if obj_data is None:
+                    break
+                try:
+                    obj_id = int(obj_data['OBJ_ID'][0])
+                except IndexError as e:
+                    obj_id = int(obj_data['OBJ_ID'])
+                try:
+                    self[obj_id].get_data_from_dict(obj_data)
+                except KeyError:
+                    warnings.warn('No data found for object {}'.format(obj_id))
+                    continue
                 if bin:
-                    obj.bin_data(delete_unbinned=delete_unbinned)
+                    self[obj_id].bin_data(delete_unbinned=delete_unbinned)
         self.remove_bad_objects()
+
+    #     def get_object_lc_multi(self, obj_ids=None, bin=True, delete_unbinned=True, use_multiprocessing=True):
+    #         # slow, should be deprecated
+    #         if len(self.objects) == 0:
+    #             self.initialise_objects()
+    #         dic = get_ngts_data(fieldname=self.fieldname, obj_id=self.object_list if
+    #         obj_ids is None else obj_ids, ngts_version=self.test, return_dic=True)
+    #         if use_multiprocessing:
+    #             pool = Pool(cpu_count())
+    #             self.objects = list(pool.map(get_data_worker, [(obj, deepcopy(dic), bin, delete_unbinned) for obj in self.objects]))
+    #             pool.close()
+    #             pool.join()
+    #         else:
+    #             for obj in self.objects:
+    #                 obj.get_data_from_dict(dic)
+    #                 if bin:
+    #                     obj.bin_data(delete_unbinned=delete_unbinned)
+    #         self.remove_bad_objects()
 
     def pickle_field(self, pickle_file=None):
         if pickle_file is None:

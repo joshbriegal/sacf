@@ -33,6 +33,22 @@ def is_good_data(flux, bad_data_ratio_threshold=0.5):
         return True
 
 
+def pop_dict_item(dic):
+    item_to_return = {}
+    for key in dic.keys():
+        item = dic[key]
+        if type(item) is np.ndarray:
+            try:
+                item, rest_of_arr = dic[key][0], dic[key][1:]
+                item_to_return[key] = np.array(item)
+                dic[key] = rest_of_arr
+            except IndexError:
+                item_to_return = None
+                break
+        else:
+            item_to_return[key] = item
+    return item_to_return, dic
+                
 def get_ngts_data(fieldname, obj_id, ngts_version, nsig2keep=None, do_relflux=True, keys=None, silent=True,
                   return_dic=False, check_num_data=True, bad_data_ratio_threshold=0.5):
     if keys is None:
