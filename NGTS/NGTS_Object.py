@@ -229,7 +229,7 @@ class NGTSObject(object):
         return
 
     def calculate_periods_from_autocorrelation(self, running_noise_threshold=None, calculate_noise_threshold=False,
-                                               num_periods=5, use_binned_data=True):
+                                               num_periods=5, use_binned_data=True, pmin=None, pmax=None):
         if not os.path.exists(self.filename):
                 os.makedirs(self.filename)
         
@@ -245,9 +245,13 @@ class NGTSObject(object):
         signal_to_noise = None
 
         ft, periods, indexes = utils.fourier_transform_and_peaks(self.correlations, self.lag_timeseries)
-
-        indexes = [index for index in indexes if periods[index] > 1 and index != 1]  # prune short periods & last point
+        
+        # pruning: user input pmin and pmax, no periods greater than half the length of the time series.
         indexes = [index for index in indexes if periods[index] < 0.5 * (time_series[-1] - time_series[0])]
+        if pmin is not None:
+            indexes = [index for index in indexes if periods[index] > pmin]
+        if pmax is not None:
+            indexes = [index for index in indexes if periods[index] < pmax]
 
         if running_noise_threshold is not None:
             # prune peaks below running noise if given
