@@ -143,7 +143,7 @@ void DataStructure::setDataMean(){  // ignoring any 'NaN' values
         std::vector<double> x_copy(M_datapoints);
         auto const end = std::remove_copy_if(_data.begin() + getVectorIndex(0, j),
                                              _data.begin() + getVectorIndex(M_datapoints, j),
-                                             x_copy.begin(), std::isnan<double>);
+                                             x_copy.begin(), [](double d) { return std::isnan(d); });
         data_mean[j] = accumulate(x_copy.begin(), end, 0.0)/std::distance(x_copy.begin(), end);
     }
 }

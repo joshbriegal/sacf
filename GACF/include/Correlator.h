@@ -5,6 +5,18 @@
 #ifndef C_CORRELATOR_H
 #define C_CORRELATOR_H
 
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+#define AT __FILE__ ":" TOSTRING(__LINE__)
+
+#ifndef __cplusplus
+  #error C++ is required
+#elif __cplusplus < 201402L
+  #pragma message(TOSTRING(__cplusplus))
+  #error C++14 is required
+#endif
+
+
 #include <cmath>
 #include <vector>
 #include <numeric>

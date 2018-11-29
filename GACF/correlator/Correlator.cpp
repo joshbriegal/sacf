@@ -238,8 +238,8 @@ void Correlator::cleanCorrelationData(int i){
     std::vector<double> copy_correlations = std::vector<double>(N_datasets * i);
 //    std::vector< std::vector<double> > tcorrs = correlations();
     for(int j = 0; j < N_datasets; j++){
-        std::copy_n(correlation_data._correlations.begin() + (j * num_lag_steps), i,
-                    copy_correlations.begin() + (j * i));
+        auto start = correlation_data._correlations.begin() + (j * num_lag_steps);
+        std::copy(start, start + i, copy_correlations.begin() + (j * i));
     }
     correlation_data._correlations = copy_correlations;
     num_lag_steps = i;

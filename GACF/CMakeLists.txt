@@ -3,6 +3,10 @@ project(GACF)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_REQUIRED_FLAGS ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+set(PYBIND11_CPP_STANDARD -std=c++14)
 
 include_directories(include)
 add_subdirectory(pybind11)
