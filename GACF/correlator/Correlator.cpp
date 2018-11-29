@@ -5,6 +5,22 @@
 #include "Correlator.h"
 #include <cmath>
 #include <iostream>
+#include <cfloat>
+
+double findMinDiff(std::vector<double>* arr){
+    // Initialize difference as infinite
+   double diff = DBL_MAX;
+   int n = arr->size();
+
+   // Find the min diff by comparing adjacent pairs in sorted array
+   for (int i=0; i<n-1; i++){
+      double tdiff = arr->at(i+1) - arr->at(i);
+      if (tdiff < diff){
+          diff = tdiff;
+      }
+   }
+   return diff;
+}
 
 CorrelationIterator::CorrelationIterator(double k_in, double vec_size){
     k = k_in;
@@ -30,9 +46,11 @@ Correlator::Correlator(DataStructure* ds_in){
         }
     }
     max_lag = ds->rnormalised_timeseries()->back();
-    lag_resolution = max_lag / M_datapoints;
+    min_lag = -max_lag;
+//    lag_resolution = max_lag / M_datapoints; // Naive implementation, should use smallest difference
+    lag_resolution = findMinDiff(ds->rnormalised_timeseries());
     alpha = ds->median_time();
-    num_lag_steps = (int) std::floor(max_lag / lag_resolution);
+    num_lag_steps = (int) std::floor((max_lag - min_lag) / lag_resolution) + 2; // 2 additional elements at 0, max
     correlation_data._correlations = std::vector<double>(N_datasets * num_lag_steps);
     correlation_data._timeseries = std::vector<double>(num_lag_steps);
 };
@@ -177,6 +195,13 @@ double Correlator::getMaxLag(){
     return max_lag;
 }
 
+void Correlator::setMinLag(double min_lag_in){
+    min_lag = min_lag_in;
+}
+double Correlator::getMinLag(){
+    return min_lag;
+}
+
 void Correlator::setLagResolution(double lag_res){
     lag_resolution = lag_res;
 }
@@ -205,6 +230,50 @@ void Correlator::addCorrelationData(CorrelationIterator* col_it, int timestep_nu
         correlation_data._correlations[timestep_number + num_lag_steps * j] = col_it->correlation[j];
     }
 //    this->correlation_data._correlations.push_back(col_it->correlation);
+}
+
+void Correlator::cleanCorrelationData(int i){
+    // clean up extra elements at end of vector not used.
+    correlation_data._timeseries.resize(i);
+    std::vector<double> copy_correlations = std::vector<double>(N_datasets * i);
+//    std::vector< std::vector<double> > tcorrs = correlations();
+    for(int j = 0; j < N_datasets; j++){
+        std::copy_n(correlation_data._correlations.begin() + (j * num_lag_steps), i,
+                    copy_correlations.begin() + (j * i));
+    }
+    correlation_data._correlations = copy_correlations;
+    num_lag_steps = i;
+}
+
+void Correlator::calculateStandardCorrelation(){
+
+    double k = min_lag;
+    bool is_positive = false;
+    int i = 0;
+    while(k <= max_lag){
+        if(k==0){
+            is_positive = true;
+        }
+        if(k > 0 && !is_positive){
+            _calculateStandardCorrelation(0, i);
+        }
+        _calculateStandardCorrelation(k, i);
+        k += lag_resolution;
+        i++;
+    }
+    cleanCorrelationData(i);
+}
+
+void Correlator::_calculateStandardCorrelation(double k, int i){
+    /*
+    Standard method of calculating correlations, using fractional weight function and natural selection function
+    */
+    auto const& col_it = new CorrelationIterator(k, N_datasets);
+    naturalSelectionFunctionIdx(col_it);
+    deltaT(col_it);
+    getFractionWeights(col_it);
+    findCorrelation(col_it);
+    addCorrelationData(col_it, i);
 }
 
 //void Correlator::standardCorrelation(double k, MemberPointerType weight_function, double alpha){

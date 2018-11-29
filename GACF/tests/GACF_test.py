@@ -4,6 +4,7 @@ import GACF.datastructure
 import GACF.correlator
 import numpy as np
 import os
+import time
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -193,11 +194,13 @@ class TestCorrelator(unittest.TestCase):
         self.data2 = [0, 1, 2, 1, np.nan]
         self.ds1 = GACF.datastructure.DataStructure(self.timestamps1, self.data1)
         self.ds2 = GACF.datastructure.DataStructure(self.timestamps1, [self.data1, self.data2])
-        self.simple_correlation_solution = {'lag_timeseries': [0., 1., 2., 3., 4.],
-                                            'correlations': [1.0, 0.0, -0.5, 0.0, 0.0]}
-        self.two_correlation_solution = {'lag_timeseries': [0., 1., 2., 3., 4.],
-                                         'correlations': [[1.0, 0.0, -0.5, 0.0, 0.0],
-                                                          [1.0, 0.0, -0.5, 0.0, 0.0]]}
+        self.simple_correlations_lag_timeseries = [0., 1., 2., 3., 4.]
+        self.simple_correlation_solution = [1.0, 0.0, -0.5, 0.0, 0.0]
+        self.two_correlation_solution = [[1.0, 0.0, -0.5, 0.0, 0.0],
+                                         [1.0, 0.0, -0.5, 0.0, 0.0]]
+        self.negative_correlations_lag_timeseries = [-4., -3., -2., -1., 0., 1., 2., 3., 4.]
+        self.negative_correlations_solution = [0.0, 0.0, -0.5, 0.0, 1.0, 0.0, -0.5, 0.0, 0.0]
+        self.add_zero_lag_timeseries = [-4.0, -2.5, -1.0, 0.0, 0.5, 2.0, 3.5]
 
     def test_setup_correlator(self):
         corr = GACF.correlator.Correlator(self.ds1)
@@ -215,9 +218,15 @@ class TestCorrelator(unittest.TestCase):
         corr.max_lag = max_lag
         self.assertEqual(max_lag, corr.max_lag)
 
+    def test_alter_min_lag(self):
+        min_lag = -100
+        corr = GACF.correlator.Correlator(self.ds1)
+        corr.min_lag = min_lag
+        self.assertEqual(min_lag, corr.min_lag)
+
     def test_default_lag_resolution(self):
         corr = GACF.correlator.Correlator(self.ds1)
-        self.assertEqual(float(self.timestamps1[-1]) / float(len(self.timestamps1)), corr.lag_resolution)
+        self.assertEqual(1.0, corr.lag_resolution)
 
     def test_alter_lag_resolution(self):
         lag_res = 100
@@ -236,13 +245,47 @@ class TestCorrelator(unittest.TestCase):
         self.assertEqual(alpha, corr.alpha)
 
     def test_simple_correlation(self):
-        correlations, _ = GACF.find_correlation_from_lists(self.timestamps1, self.data1, lag_resolution=1.0)
-        self.assertEqual(correlations, self.simple_correlation_solution)
+        lag_timeseries, correlations, _ = GACF.find_correlation_from_lists(self.timestamps1, self.data1, min_lag=0)
+        self.assertEqual(self.simple_correlations_lag_timeseries, lag_timeseries)
+        self.assertEqual(self.simple_correlation_solution, correlations)
 
     def test_two_correlation(self):
-        correlations, _ = GACF.find_correlation_from_lists(self.timestamps1, [self.data1, self.data1],
-                                                           lag_resolution=1.0)
-        self.assertEqual(correlations, self.two_correlation_solution)
+        lag_timeseries, correlations, _ = GACF.find_correlation_from_lists(self.timestamps1, [self.data1, self.data1],
+                                                                           min_lag=0)
+        self.assertEqual(self.simple_correlations_lag_timeseries, lag_timeseries)
+        self.assertEqual(self.two_correlation_solution, correlations)
+
+    def test_negative_correlations(self):
+        lag_timeseries, correlations, _ = GACF.find_correlation_from_lists(self.timestamps1, self.data1)
+        self.assertEqual(self.negative_correlations_lag_timeseries, lag_timeseries)
+        self.assertEqual(self.negative_correlations_solution, correlations)
+
+    def test_add_zero_lag(self):
+        lag_timeseries, correlations, _ = GACF.find_correlation_from_lists(self.timestamps1, self.data1,
+                                                                           lag_resolution=1.5)
+        self.assertEqual(self.add_zero_lag_timeseries, lag_timeseries)
+
+    def test_cpp_method(self):
+        start = time.time()
+        lag_timeseries, correlations, _ = GACF.find_correlation_from_lists_cpp(self.timestamps1, self.data1)
+        end = time.time()
+        cpp_time = end - start
+        self.assertEqual(self.negative_correlations_lag_timeseries, lag_timeseries)
+        self.assertEqual(self.negative_correlations_solution, correlations)
+
+        start = time.time()
+        lag_timeseries, correlations, _ = GACF.find_correlation_from_lists(self.timestamps1, self.data1)
+        end = time.time()
+
+        python_time = end - start
+
+        print
+        print 'Python:', python_time * 1000, 'ms'
+        print 'C++:', cpp_time * 1000, 'ms'
+        print 'C++ is {} times faster'.format(python_time / cpp_time)
+        print
+
+
 
 
 if __name__ == '__main__':

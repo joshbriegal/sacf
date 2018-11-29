@@ -1,4 +1,4 @@
-from GACF import find_correlation_from_lists
+from GACF import find_correlation_from_lists_cpp
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -19,10 +19,14 @@ plt.title('Raw Data (sin wave, randomly sampled)')
 plt.xlabel('Time (days)')
 plt.ylabel('Sin(time)')
 
-correlations = find_correlation_from_lists(x_values, time_series)
+lag_timeseries, correlations, corr = find_correlation_from_lists_cpp(time_series, x_values,
+                                                                     lag_resolution=average_timestep)
+
+print lag_timeseries
+print correlations
 
 plt.subplot(212)
-plt.plot(correlations['lag_timeseries'], correlations['correlations'])
+plt.plot(lag_timeseries, correlations)
 plt.title('Autocorrelation')
 plt.xlabel('Lag Time (days)')
 plt.ylabel('Correlation')

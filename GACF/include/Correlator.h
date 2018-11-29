@@ -12,6 +12,9 @@
 
 #include "DataStructure.h"
 
+double findMinDiff(std::vector<double>*);
+
+
 struct CorrelationIterator{
     // struct containing all useful data per k-step iteration
     double k;
@@ -23,6 +26,19 @@ struct CorrelationIterator{
 
     explicit CorrelationIterator(double, double);
 };
+
+
+template <typename T>
+std::vector<T> flatten(const std::vector<std::vector<T>>& v) {
+    std::size_t total_size = 0;
+    for (const auto& sub : v)
+        total_size += sub.size(); // I wish there was a transform_accumulate
+    std::vector<T> result;
+    result.reserve(total_size);
+    for (const auto& sub : v)
+        result.insert(result.end(), sub.begin(), sub.end());
+    return result;
+}
 
 struct CorrelationData{
     std::vector<double> _correlations; std::vector<double> _timeseries;
@@ -39,6 +55,7 @@ class Correlator{
     std::vector<double> N;
 
     double max_lag;
+    double min_lag;
     double lag_resolution;
     double alpha; // characteristic length scale of weight functions
     double N_datasets;
@@ -54,7 +71,9 @@ public:
     void deltaT(CorrelationIterator*);
     void findCorrelation(CorrelationIterator*);
     void addCorrelationData(CorrelationIterator*, int);
-//    void standardCorrelation(double, MemberPointerType, double);
+    void cleanCorrelationData(int);
+    void calculateStandardCorrelation();
+    void _calculateStandardCorrelation(double, int);
 
     void clearCorrelation() {correlation_data = *new CorrelationData; };
 
@@ -66,6 +85,9 @@ public:
 
     void setMaxLag(double);
     double getMaxLag();
+
+    void setMinLag(double);
+    double getMinLag();
 
     void setLagResolution(double);
     double getLagResolution();

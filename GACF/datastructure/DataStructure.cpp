@@ -11,6 +11,7 @@
 
 #include "DataStructure.h"
 
+
 const char* EmptyDataStructureException::what() const throw(){
     return "DataStructure cannot be initialised with empty constructor";
 }
