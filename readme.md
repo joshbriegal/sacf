@@ -12,16 +12,24 @@ in python:
 ```python
 from GACF import *
 
-correlation_dictionary = find_correlation_from_file('filepath')
+lag_timeseries, correlations, corr_object = find_correlation_from_file('filepath')
 ```
 OR
 ```python
-correlation_dictionary = find_correlation_from_lists(values, timeseries, errors=None)
+lag_timeseries, correlations, corr_object = find_correlation_from_lists(values, timeseries, errors=None)
 ```
 with options:
 ```python
 max_lag=None, lag_resolution=None, selection_function='natural', weight_function='gaussian', alpha=None
 ```
+
+new c++ implementation, should be faster:
+```python
+from GACF import *
+
+lag_timeseries, correlations, corr_object = find_correlation_from_lists_cpp(values, timeseries, errors=None)
+```
+
 ### Examples
 
 function_import_sine_wave_test.py creates a randomly sampled sine wave and finds the autocorrelation
