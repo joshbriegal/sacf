@@ -2,12 +2,13 @@
 PyObject per NGTS object, containing light curve and associated analysis
 """
 import numpy as np
-from GACF import find_correlation_from_lists, GACF_LOG_MESSAGE
+from GACF import find_correlation_from_lists_cpp, GACF_LOG_MESSAGE
 import GACF_utils as utils
 import os
 import pickle
 import json
 import logging
+from copy import deepcopy
 
 
 def return_object_from_json_string(json_str):
@@ -28,7 +29,7 @@ def return_object_from_json_string(json_str):
 
 class NGTSObject(object):
 
-    def __init__(self, obj, field, test, lc_data2get=None, tbin=20, nsig2keep=None, do_relflux=True,
+    def __init__(self, obj, field, test, lc_data2get=None, tbin=20, nsig2keep=None, do_relflux=True, min_lag=None,
                  max_lag=None, lag_resolution=None, selection_function='natural', weight_function='gaussian',
                  alpha=None, field_filename=None, logger=None):
 
@@ -47,6 +48,7 @@ class NGTSObject(object):
         self.do_relflux = do_relflux
 
         # GACF settings
+        self.min_lag = min_lag
         self.max_lag = max_lag
         self.lag_resolution = lag_resolution
         self.selection_function = selection_function
@@ -100,6 +102,20 @@ class NGTSObject(object):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def __copy__(self):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        result.__dict__.update(self.__dict__)
+        return result
+
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            setattr(result, k, deepcopy(v, memo))
+        return result
+
     def create_logger(self, logger=None):
         if logger is None:
             fh = logging.FileHandler(os.path.join(self.filename, 'peaks.log'), 'w')
@@ -120,7 +136,6 @@ class NGTSObject(object):
             self.logger = None
         return
 
-
     def get_binned_data(self, delete_unbinned=True):
         self.get_data()
         self.bin_data(delete_unbinned=delete_unbinned)
@@ -130,7 +145,7 @@ class NGTSObject(object):
                            do_relflux=True):  # if getting data from NGTSio using multiple lcs
         if not isinstance(dic["OBJ_ID"], list):
             self.flux, self.timeseries, self.median_flux, self.flux_std_dev, self.num_observations, self.ok = \
-            utils.clean_ngts_data(dic, nsig2keep=nsig2keep, do_relflux=do_relflux)
+                utils.clean_ngts_data(dic, nsig2keep=nsig2keep, do_relflux=do_relflux)
             return
         else:
             idx, = np.where(dic["OBJ_ID"] == self)
@@ -162,8 +177,8 @@ class NGTSObject(object):
         if not self.ok:
             return
         self.timeseries_binned, self.flux_binned, self.flux_binned_err = \
-            utils.rebin_err(self.timeseries, self.flux,
-                            dt=self.tbin * utils.TIME_CONVERSIONS['m2d'], get_err_on_mean=False)
+            utils.rebin_err_chunks(self.timeseries, self.flux,
+                                   dt=self.tbin * utils.TIME_CONVERSIONS['m2d'], get_err_on_mean=False)
         self.median_flux_binned, self.flux_binned_std_dev = utils.medsig(self.flux_binned)
         self.num_observations_binned = len(self.timeseries_binned)
         if delete_unbinned:  # should save space as we don't need unbinned data after binning
@@ -189,13 +204,16 @@ class NGTSObject(object):
 
         self.running_noise_threshold, self.gen_data_dict, self.gen_autocol_dict, self.gen_ft_dict = \
             utils.calculate_noise_level(time_series=self.timeseries_binned, generated_data=generated_data,
-                                        sigma_level_calc=sigma_level_calc, sigma_level_out=sigma_level, logger=None)
+                                        sigma_level_calc=sigma_level_calc, sigma_level_out=sigma_level,
+                                        min_lag=self.min_lag, max_lag=self.max_lag,
+                                        lag_resolution=self.lag_resolution, alpha=self.alpha,
+                                        logger=None)
 
         return
 
     def calculate_autocorrelation(self, use_binned_data=True):
         if not os.path.exists(self.filename):
-                os.makedirs(self.filename)
+            os.makedirs(self.filename)
         if self.logger is None:
             self.create_logger()
         if use_binned_data and (self.timeseries_binned is None or self.flux_binned is None):
@@ -207,35 +225,41 @@ class NGTSObject(object):
             self.get_data()
 
         if use_binned_data:
-            correlations, corr = find_correlation_from_lists(self.timeseries_binned, self.flux_binned,
-                                                             max_lag=self.max_lag,
-                                                             lag_resolution=self.lag_resolution,
-                                                             selection_function=self.selection_function,
-                                                             weight_function=self.weight_function, alpha=self.alpha)
+            (self.lag_timeseries,
+             self.correlations,
+             corr) = find_correlation_from_lists_cpp(self.timeseries_binned,
+                                                     self.flux_binned,
+                                                     min_lag=self.min_lag,
+                                                     max_lag=self.max_lag,
+                                                     lag_resolution=self.lag_resolution,
+                                                     alpha=self.alpha)
         else:
-            correlations, corr = find_correlation_from_lists(self.timeseries, self.flux,
-                                                             max_lag=self.max_lag,
-                                                             lag_resolution=self.lag_resolution,
-                                                             selection_function=self.selection_function,
-                                                             weight_function=self.weight_function, alpha=self.alpha)
+            (self.lag_timeseries,
+             self.correlations,
+             corr) = find_correlation_from_lists_cpp(self.timeseries, self.flux,
+                                                     min_lag=self.min_lag,
+                                                     max_lag=self.max_lag,
+                                                     lag_resolution=self.lag_resolution,
+                                                     alpha=self.alpha)
 
-        self.correlations = correlations['correlations']
-        self.lag_timeseries = correlations['lag_timeseries']
         self.logger.info(
             GACF_LOG_MESSAGE.format(no_data=self.num_observations_binned if use_binned_data else self.num_observations,
                                     no_lag_points=len(self.lag_timeseries),
                                     lag_resolution=corr.lag_resolution))
-
+        self.min_lag = corr.min_lag
+        self.max_lag = corr.max_lag
+        self.lag_resolution = corr.lag_resolution
+        self.alpha = corr.alpha
         return
 
     def calculate_periods_from_autocorrelation(self, running_noise_threshold=None, calculate_noise_threshold=False,
-                                               num_periods=5, use_binned_data=True, pmin=None, pmax=None):
+                                               num_periods=None, use_binned_data=True, pmin=None, pmax=None, **kwargs):
         if not os.path.exists(self.filename):
-                os.makedirs(self.filename)
-        
+            os.makedirs(self.filename)
+
         if running_noise_threshold is None:
             if calculate_noise_threshold:
-                self.calculate_noise_threshold()
+                self.calculate_noise_threshold(**kwargs)
             running_noise_threshold = self.running_noise_threshold
 
         if self.correlations is None or self.lag_timeseries is None:
@@ -244,8 +268,8 @@ class NGTSObject(object):
         time_series = self.timeseries_binned if use_binned_data else self.timeseries
         signal_to_noise = None
 
-        ft, periods, indexes = utils.fourier_transform_and_peaks(self.correlations, self.lag_timeseries)
-        
+        ft, periods, indexes = utils.fourier_transform_and_peaks(self.correlations, self.lag_timeseries, n=128)
+
         # pruning: user input pmin and pmax, no periods greater than half the length of the time series.
         indexes = [index for index in indexes if periods[index] < 0.5 * (time_series[-1] - time_series[0])]
         if pmin is not None:
@@ -264,7 +288,7 @@ class NGTSObject(object):
             indexes = [index for index, _ in sorted(zip(indexes, [ft[index] for index in indexes]),
                                                     key=lambda pair: pair[1], reverse=True)]  # sort peaks by amplitude
 
-        indexes = indexes[:num_periods]  # trim to n most significant peaks
+        indexes = indexes[:num_periods]  # trim to n most significant peaks (default None => keep all)
 
         if running_noise_threshold is not None:
             signal_to_noise = [ft[index] / running_noise_threshold[index] for index in indexes]
