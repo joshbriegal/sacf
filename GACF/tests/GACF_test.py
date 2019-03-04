@@ -201,6 +201,9 @@ class TestCorrelator(unittest.TestCase):
         self.negative_correlations_lag_timeseries = [-4., -3., -2., -1., 0., 1., 2., 3., 4.]
         self.negative_correlations_solution = [0.0, 0.0, -0.5, 0.0, 1.0, 0.0, -0.5, 0.0, 0.0]
         self.add_zero_lag_timeseries = [-4.0, -2.5, -1.0, 0.0, 0.5, 2.0, 3.5]
+        # self.length_long_timestamps = 50000
+        # self.timestamps_long = np.linspace(0, self.length_long_timestamps, self.length_long_timestamps)
+        # self.values_long = np.random.rand(self.length_long_timestamps)
 
     def test_setup_correlator(self):
         corr = GACF.correlator.Correlator(self.ds1)
@@ -285,6 +288,8 @@ class TestCorrelator(unittest.TestCase):
         print 'C++ is {} times faster'.format(python_time / cpp_time)
         print
 
+    # def test_memory_overflow(self):
+    #     GACF.find_correlation_from_lists_cpp(self.timestamps_long, self.values_long, lag_resolution=1)
 
 
 

@@ -50,7 +50,7 @@ Correlator::Correlator(DataStructure* ds_in){
 //    lag_resolution = max_lag / M_datapoints; // Naive implementation, should use smallest difference
     lag_resolution = findMinDiff(ds->rnormalised_timeseries());
     alpha = ds->median_time();
-    num_lag_steps = (int) std::floor((max_lag - min_lag) / lag_resolution) + 2; // 2 additional elements at 0, max
+    num_lag_steps = (int) std::floor((max_lag - min_lag) / lag_resolution) + 3; // 2 additional elements at 0, max
     correlation_data._correlations = std::vector<double>(N_datasets * num_lag_steps);
     correlation_data._timeseries = std::vector<double>(num_lag_steps);
 };
@@ -112,6 +112,7 @@ void Correlator::naturalSelectionFunctionIdx(CorrelationIterator* cor_it){
             cor_it->selection_indices.push_back(idx);
         }
     }
+    cor_it->shifted_timeseries.clear();
 }
 
 void Correlator::fastSelectionFunctionIdx(CorrelationIterator* cor_it){
@@ -139,6 +140,7 @@ void Correlator::fastSelectionFunctionIdx(CorrelationIterator* cor_it){
             cor_it->selection_indices[i] = idx + i;
         }
     }
+    cor_it->shifted_timeseries.clear();
 }
 
 void Correlator::findCorrelation(CorrelationIterator* cor_it){
@@ -170,6 +172,7 @@ void Correlator::deltaT(CorrelationIterator* cor_it){
         cor_it->delta_t.push_back(abs(ds->rnormalised_timeseries()->at(value) - cor_it->shifted_timeseries[t_i]));
         t_i++;
     }
+    cor_it->shifted_timeseries.clear();
 }
 
 void Correlator::getFractionWeights(CorrelationIterator* cor_it){
@@ -178,6 +181,7 @@ void Correlator::getFractionWeights(CorrelationIterator* cor_it){
         cor_it->weights.push_back(fractionWeightFunction(value));
         i++;
     }
+    cor_it->delta_t.clear();
 }
 
 void Correlator::getGaussianWeights(CorrelationIterator* cor_it){
@@ -186,6 +190,7 @@ void Correlator::getGaussianWeights(CorrelationIterator* cor_it){
         cor_it->weights.push_back(gaussianWeightFunction(value));
         i++;
     }
+    cor_it->delta_t.clear();
 }
 
 void Correlator::setMaxLag(double max_lag_in){
@@ -274,6 +279,7 @@ void Correlator::_calculateStandardCorrelation(double k, int i){
     getFractionWeights(col_it);
     findCorrelation(col_it);
     addCorrelationData(col_it, i);
+    delete col_it;
 }
 
 //void Correlator::standardCorrelation(double k, MemberPointerType weight_function, double alpha){

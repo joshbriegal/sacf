@@ -117,7 +117,7 @@ if __name__ == "__main__":
     periods = period_axis[indexes]
 
     sorted_periods = [p[0] for p in sorted(zip(periods, powers), key=lambda x: x[1])]
-    calculated_period = periods[0]
+    calculated_period = sorted_periods[0]
 
     print 'Inputted period: {}, outputted period {} from FFT'.format(period, calculated_period)
 
