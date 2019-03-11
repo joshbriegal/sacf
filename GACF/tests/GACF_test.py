@@ -1,3 +1,7 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import unittest
 import GACF
 import GACF.datastructure
@@ -282,11 +286,11 @@ class TestCorrelator(unittest.TestCase):
 
         python_time = end - start
 
-        print
-        print 'Python:', python_time * 1000, 'ms'
-        print 'C++:', cpp_time * 1000, 'ms'
-        print 'C++ is {} times faster'.format(python_time / cpp_time)
-        print
+        print()
+        print('Python:', python_time * 1000, 'ms')
+        print('C++:', cpp_time * 1000, 'ms')
+        print('C++ is {} times faster'.format(python_time / cpp_time))
+        print()
 
     # def test_memory_overflow(self):
     #     GACF.find_correlation_from_lists_cpp(self.timestamps_long, self.values_long, lag_resolution=1)

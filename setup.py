@@ -46,8 +46,8 @@ class CMakeBuild(build_ext):
             build_args += ['--', '/m']
         else:
             try:
-                GPP_COMPILER = subprocess.check_output('which g++', shell=True).strip('\n\t\r')
-                GCC_COMPILER = subprocess.check_output('which gcc', shell=True).strip('\n\t\r')
+                GPP_COMPILER = subprocess.check_output("which g++", shell=True).decode().strip('\n\t\r')
+                GCC_COMPILER = subprocess.check_output("which gcc", shell=True).decode().strip('\n\t\r')
             except subprocess.CalledProcessError as e:
                 GPP_COMPILER, GCC_COMPILER = None, None
             else:
@@ -66,7 +66,7 @@ class CMakeBuild(build_ext):
 
 setup(
     name='GACF',
-    version='0.2',
+    version='0.3',
     author='Joshua Briegal',
     author_email='jtb34@cam.ac.uk',
     description='A generalisation of the autocorrelation function, for non-uniformly sampled timeseries data',
@@ -75,6 +75,5 @@ setup(
     ext_modules=[CMakeExtension('GACF.correlator', 'GACF'), CMakeExtension('GACF.datastructure', 'GACF')],
     cmdclass=dict(build_ext=CMakeBuild),
     test_suite='GACF.tests',
-    zip_safe=False,
-    install_requires=['tqdm']
+    zip_safe=False
 )

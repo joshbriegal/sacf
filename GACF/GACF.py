@@ -1,6 +1,5 @@
-from datastructure import DataStructure
-from correlator import CorrelationIterator, Correlator
-from tqdm import tqdm
+from .datastructure import DataStructure
+from .correlator import CorrelationIterator, Correlator
 
 SELECTION_FUNCTIONS = {
     'fast': Correlator.fastSelectionFunctionIdx,
