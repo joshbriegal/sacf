@@ -82,8 +82,11 @@ class NGTSObject(object):
         self.peak_indexes, self.peak_percentages, self.peak_signal_to_noise = None, None, None
 
         self.logger = None
+        if not os.path.exists(self.filename):
+            os.makedirs(self.filename)
 
         self.ok = True
+        self.message = ''
 
     def __str__(self):
         return "NGTS Object " + str(self.field) + "_" + str(self.obj) + " ({})".format(self.test)
@@ -142,10 +145,11 @@ class NGTSObject(object):
         return
 
     def get_data_from_dict(self, dic, nsig2keep=None,
-                           do_relflux=True):  # if getting data from NGTSio using multiple lcs
+                           do_relflux=True, min_points=500):  # if getting data using multiple lcs
         if not isinstance(dic["OBJ_ID"], list):
-            self.flux, self.timeseries, self.median_flux, self.flux_std_dev, self.num_observations, self.ok = \
-                utils.clean_ngts_data(dic, nsig2keep=nsig2keep, do_relflux=do_relflux)
+            self.flux, self.timeseries, self.median_flux, self.flux_std_dev, self.num_observations, self.ok, message = \
+                utils.clean_ngts_data(dic, nsig2keep=nsig2keep, do_relflux=do_relflux, min_points=min_points)
+            self.message += message
             return
         else:
             idx, = np.where(dic["OBJ_ID"] == self)
@@ -162,8 +166,9 @@ class NGTSObject(object):
                         new_dic[key] = new_dic[key][0]
                 except TypeError:
                     new_dic[key] = dic[key]
-                    self.flux, self.timeseries, self.median_flux, self.flux_std_dev, self.num_observations, self.ok = \
+                    self.flux, self.timeseries, self.median_flux, self.flux_std_dev, self.num_observations, self.ok, message = \
                         utils.clean_ngts_data(new_dic, nsig2keep=nsig2keep, do_relflux=do_relflux)
+                    self.message += message
                     return
 
     def get_data(self):
@@ -212,15 +217,16 @@ class NGTSObject(object):
         return
 
     def calculate_autocorrelation(self, use_binned_data=True):
-        if not os.path.exists(self.filename):
-            os.makedirs(self.filename)
+#        if not os.path.exists(self.filename):
+#            os.makedirs(self.filename)
         if self.logger is None:
             self.create_logger()
         if use_binned_data and (self.timeseries_binned is None or self.flux_binned is None):
             if self.timeseries is not None and self.flux is not None:
                 self.bin_data()
             else:
-                self.get_binned_data()
+                raise ValueError('No data for {}'.format(self))
+#                self.get_binned_data()
         elif not use_binned_data and (self.flux is None or self.timeseries is None):
             self.get_data()
 
@@ -298,6 +304,7 @@ class NGTSObject(object):
         self.peak_indexes = indexes
         self.peak_signal_to_noise = signal_to_noise
         self.periods = [periods[index] for index in indexes]
+        self.peak_size = [ft[index] for index in indexes]
         return
 
     def plot_data_autocol_ft(self, use_binned_data=True, interactive=False):
@@ -364,6 +371,7 @@ class NGTSObject(object):
 
     def log_peaks(self):
         self.logger.info('peak periods: {}'.format(self.periods))
+        self.logger.info('peak sizes: {}'.format(self.peak_size))
         self.logger.info('signal to noise {}'.format(self.peak_signal_to_noise))
         return
 

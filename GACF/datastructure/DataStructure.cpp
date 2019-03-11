@@ -39,14 +39,10 @@ void DataStructure::setUp(){
     norm_data.resize(_data.size());
     calcNormt(); calcNormData();
     settMedian();
-    // std::cout << "DataStructure object created at " << this << std::endl;
 }
 
 long DataStructure::getVectorIndex(int i, int j){
     return (long) i + j * M_datapoints;
-}
-
-DataStructure::~DataStructure(){
 }
 
 DataStructure::DataStructure(std::vector<double>* t_in, std::vector< std::vector<double> >* data_in): t(*t_in){

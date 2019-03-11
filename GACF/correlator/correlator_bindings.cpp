@@ -24,14 +24,15 @@ PYBIND11_MODULE(correlator, c) {
         .def("fastSelectionFunctionIdx", &Correlator::fastSelectionFunctionIdx)
         .def("deltaT", &Correlator::deltaT)
         .def("findCorrelation", &Correlator::findCorrelation)
+        .def("clearCorrelation", &Correlator::clearCorrelation)
         .def("fractionWeightFunction", &Correlator::fractionWeightFunction)
         .def("gaussianWeightFunction", &Correlator::gaussianWeightFunction)
         .def("getFractionWeights", &Correlator::getFractionWeights)
         .def("getGaussianWeights", &Correlator::getGaussianWeights)
         .def("normalised_timeseries", &Correlator::normalised_timeseries)
         .def("values", &Correlator::values)
-        .def_property_readonly("lag_timeseries", &Correlator::lag_timeseries)
-        .def_property_readonly("correlations", &Correlator::correlations)
+        .def("lag_timeseries", &Correlator::lag_timeseries)
+        .def("correlations", &Correlator::correlations)
         .def("addCorrelationData", &Correlator::addCorrelationData)
         .def("cleanCorrelationData", &Correlator::cleanCorrelationData)
         .def("calculateStandardCorrelation", &Correlator::calculateStandardCorrelation)
@@ -41,7 +42,6 @@ PYBIND11_MODULE(correlator, c) {
         .def_property("alpha", &Correlator::getAlpha, &Correlator::setAlpha)
         .def_property_readonly("M_datapoints", &Correlator::getMDatapoints)
         .def_property_readonly("N_datasets", &Correlator::getNDatasets)
-        .def_property_readonly("num_lag_timesteps", &Correlator::getNumLagSteps)
         ;
 
 }
