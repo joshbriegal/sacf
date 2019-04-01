@@ -411,3 +411,169 @@ class NGTSObject(object):
             self.ft, self.period_axis = None, None
             self.peak_indexes, self.peak_percentages = None, None
         return
+    
+    def clean_periods(self):
+        t = np.array(self.lag_timeseries)
+        x = np.array(self.correlations)
+        prs = []
+        if self.periods:
+            for p, a in zip(self.periods, self.peak_size):
+                try:
+                    if p < 1.0:
+                        # remove periods < 1 day for now
+                        continue
+                    pr = utils.refine_period(t, x, p)
+                    self.logger.info('Altered {} to {}'.format(p, pr))
+                    pr = pr.round(decimals=3)
+                    if (pr, a) not in prs:
+                        prs.append((pr, a))
+                except Exception as e:
+                    self.logger.info('Period {} not refined - ignoring'.format(p))
+                    continue
+            max_amp = prs[0][1]
+            self.refined_periods = [p for (p, a) in prs if (a > 0.8 * max_amp)]
+            self.cleaned_refined_periods = utils.clear_aliases(self.refined_periods, 1.0,
+                                                        0.1)  # remove 1 day aliases to 0.1 days
+            print_list = np.array2string(np.array(self.cleaned_refined_periods))
+            self.logger.info('Most likely periods {}'.format(print_list))
+            return self.cleaned_refined_periods
+    
+    def check_moon_detection(self, moon_epoch, period=None, shape_or_noise=True):
+        is_moon = True
+        if period is None:
+            if len(self.cleaned_refined_periods) > 0:
+                period = self.cleaned_refined_periods[0]
+            else:
+                is_moon = False
+#                 self.logger.info('No Periods Found')
+                return is_moon
+        # is period within range 25 - 30 days?
+        if not 25.0 < period < 32.0:
+            is_moon = False
+            self.logger.info('NOT MOON: Rejected on period range')
+            return is_moon
+        # is there a noticable change in the LC around 0.5 phase from new moon?
+        t = self.timeseries_binned
+        f = self.flux_binned
+        phase_app, data_app = utils.create_phase(t, period, moon_epoch), f
+        binned_phase_app, binned_data_app = utils.bin_phase_curve(phase_app, data_app)
+        
+        idx_in = np.array([i for i in range(len(phase_app)) if 0.4 < phase_app[i] < 0.6])
+        idx_out = np.array([i for i in range(len(phase_app)) if i not in idx_in])
+        idx_in_bin = [i for i in range(len(binned_phase_app)) if 0.4 < binned_phase_app[i] < 0.6]
+        idx_out_bin = [i for i in range(len(binned_phase_app)) if i not in idx_in_bin]
+        
+        med_out, sig_out = utils.medsig(np.array(data_app)[idx_out])
+        med_in, sig_in = utils.medsig(np.array(data_app)[idx_in])
+        
+        mean_diff_in = np.mean(np.diff(binned_data_app[idx_in_bin]))
+        mean_diff_out = np.mean(np.diff(binned_data_app[idx_out_bin]))
+        
+#         fig, ax = plt.subplots(figsize=(10,5))
+#         ax.scatter(phase_app[idx_in], data_app[idx_in], s=0.1, c='r')
+#         ax.scatter(phase_app[idx_out], data_app[idx_out], s=0.1, c='g')
+#         ax.axhline(med_in, color='r')
+#         ax.axhline(med_out, color='g')
+#         ax.axhspan(med_in-sig_in, med_in+sig_in, color='r', alpha=0.2)
+#         ax.axhspan(med_out-sig_out, med_out+sig_out, color='g', alpha=0.2)
+#         plt.show()
+    #     print 'Outside: {}  {}'.format(med_out, sig_out)
+    #     print 'Inside: {}  {}'.format(med_in, sig_in)
+
+        if (not sig_in > sig_out):
+            self.logger.info('NOT MOON: Rejected on noise threshold')
+            noise_crit = False
+        else:
+            self.logger.info('MOON: Noise criterion suggests moon')
+            noise_crit = True
+        if (not abs(med_in - med_out) > sig_out):
+            self.logger.info('NOT MOON: Rejected on signal shape')
+            shape_crit = False
+    #         print 'Outside: {}  {}'.format(med_out, sig_out)
+    #         print 'Inside: {}  {}'.format(med_in, sig_in)
+        else:
+            self.logger.info('MOON: Signal shape suggests moon')
+            shape_crit = True
+            if med_in > med_out:
+                self.logger.info('MOON SIGNAL HIGHER')
+            else:
+                self.logger.info('MOON SIGNAL LOWER')
+        if mean_diff_in <= mean_diff_out:
+            self.logger.info('NOT MOON: Rejected on flatness criterion')
+            diff_crit = False
+        else:
+            self.logger.info('MOON: Flatness criterion suggests moon')
+            diff_crit = True
+            
+        is_moon = True if sum(1 for ct in [noise_crit, diff_crit, shape_crit] if ct) >=2 else False
+        return is_moon
+    
+    def check_fourier_ok(self, nlim=20, peakpct=0.5, npeakstocheck=3, binary_check=0.8):
+        is_ok = True
+        ft_max = max(self.ft)
+        peaks = self.ft[self.peak_indexes] / ft_max
+    #     Are peaks sorted? - not sure if needed check
+    #     if not np.array_equal(peaks,sorted(peaks, reverse=True)):
+    #         is_ok = False
+    #         print 'Rejected as peaks not sorted in size => weirdness'
+    #         return is_ok
+        # hard limit on number of peaks when it will be noise
+        if len(peaks) > nlim:
+            is_ok = False
+            self.logger.info('BAD FFT: Rejected on no of peaks (>{})'.format(nlim))
+            return is_ok
+        if len(peaks) == 1:
+            self.logger.info('GOOD FFT: Only 1 period found, ok!')
+            return is_ok
+        # is the max peak > peakpct?
+        if max(peaks) < peakpct:
+            is_ok = False
+            self.logger.info('BAD FFT: Rejected on highest peak not being significant (peakpct)')
+            return is_ok
+        # is the second peak similar to the first peak?
+        if peaks[1] > binary_check:
+            self.logger.info('FFT CHECK: Possible binary detected')
+        # is the highest peak significantly above the mean difference between peaks?
+        meandiff = np.mean(abs(np.diff(peaks)))
+        if abs(peaks[0] - peaks[1]) < meandiff:
+            is_ok = False
+            self.logger.info('BAD FFT: Rejected on highest peak not being significant (diff)')
+            return is_ok
+        return is_ok
+    
+    def remove_moon_and_check_ok(self, new_moon_epoch, period=None):
+        is_ok = False
+        if period is None:
+            period = self.cleaned_refined_periods[0]
+        t = np.array(self.timeseries_binned)
+        f = np.array(self.flux_binned)
+        ferr = np.array(self.flux_binned_err)
+        t2r, f2r, ferr2r, sgf = utils.remove_moon_signal(t=t, f=f, ferr=ferr, P=period, epoch=new_moon_epoch)
+        
+        self.timeseries_binned_old = self.timeseries_binned
+        self.flux_binned_old = self.flux_binned
+        self.flux_binned_err_old = self.flux_binned_err
+        
+        self.timeseries_binned = t2r
+        self.flux_binned = f2r
+        self.flux_binned_err = ferr2r
+        
+        self.correlations = None
+        self.calculate_periods_from_autocorrelation(calculate_noise_threshold=False)
+        
+        self.clean_periods()
+        new_period = self.cleaned_refined_periods[0]
+        
+        fourier_ok = self.check_fourier_ok()
+        if fourier_ok:
+            shape_or_noise = False if abs(new_period - period) > 1.0 else True
+            is_moon = self.check_moon_detection(new_moon_epoch, shape_or_noise=shape_or_noise) #lax criteria this time
+            if is_moon:
+                self.logger.info('Moon detected again afer removal')
+            else:
+                self.logger.info('New best period detected after moon removal')
+                is_ok = True
+        else:
+            is_ok = False
+            self.logger.info('Removing moon left noise')
+        return is_ok
