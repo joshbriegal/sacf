@@ -1,2 +1,5 @@
 #!/usr/bin/env bash
-python setup.py test && rm GACF/*.so && rm -r build && rm -r GACF.egg-info
+pip install -r requirements.txt -r development_requirements.txt
+cd ..
+pip install ./GACF -v
+pytest GACF/GACF/tests

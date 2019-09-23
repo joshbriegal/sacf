@@ -4,8 +4,9 @@ import sys
 import platform
 import subprocess
 
-from setuptools import setup, Extension, find_packages
+from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
+from setuptools.command.test import test as TestCommand
 from distutils.version import LooseVersion
 
 
@@ -13,6 +14,20 @@ class CMakeExtension(Extension):
     def __init__(self, name, sourcedir=''):
         Extension.__init__(self, name, sources=[])
         self.sourcedir = os.path.abspath(sourcedir)
+
+
+class PyTest(TestCommand):
+    user_options = [('pytest-args=', 'a', "Arguments to pass to py.test")]
+
+    def initialize_options(self):
+        TestCommand.initialize_options(self)
+        self.pytest_args = []
+
+    def run_tests(self):
+        # import here, cause outside the eggs aren't loaded
+        import pytest
+        errno = pytest.main(self.pytest_args)
+        sys.exit(errno)
 
 
 class CMakeBuild(build_ext):
@@ -73,7 +88,8 @@ setup(
     long_description='',
     packages=['GACF'],
     ext_modules=[CMakeExtension('GACF.correlator', 'GACF'), CMakeExtension('GACF.datastructure', 'GACF')],
-    cmdclass=dict(build_ext=CMakeBuild),
-    test_suite='GACF.tests',
+    cmdclass=dict(build_ext=CMakeBuild,
+                  test=PyTest),
+    tests_require=['pytest'],
     zip_safe=False
 )
