@@ -1,4 +1,4 @@
-https://github.com/joshbriegal/GACF/workflows/Python%20tests/badge.svg
+![Python Test Status](https://github.com/joshbriegal/GACF/workflows/Python%20tests/badge.svg)
   
 # Generalised Autocorrelation Function 
 (credit Larz Kreutzer, c++ implementation by Josh Briegal jtb34@cam.ac.uk)
