@@ -1,0 +1,10 @@
+2019-04-30 13:54:34,739 - Kepler - INFO - Worker started at 2019-04-30 12:54:34
+2019-04-30 13:54:34,741 - Kepler - ERROR - Subprocess failed, exiting
+Traceback (most recent call last):
+  File "/Users/joshbriegal/GitHub/GACF/example/report_plots/NGTSFieldRun.py", line 130, in wrapped_worker
+    return worker(object_list, fits_file, root_file, fieldname, cycle,  plogger)
+  File "/Users/joshbriegal/GitHub/GACF/example/report_plots/NGTSFieldRun.py", line 141, in worker
+    field = NF(fieldname=fieldname, test=cycle, object_list=object_list, root_file=root_file, logger=plogger)
+  File "/Users/joshbriegal/GitHub/GACF/NGTS/NGTS_Field.py", line 136, in __init__
+    self.object_list = ([int(id) for id in object_list] if object_list is not None else None)
+ValueError: invalid literal for int() with base 10: 'report_plots/KIC_5110407_LC_quarter_5.dat'

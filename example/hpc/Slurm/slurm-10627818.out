@@ -1,0 +1,34 @@
+init.c(556):ERROR:161: Cannot initialize TCL
+init.c(556):ERROR:161: Cannot initialize TCL
+init.c(556):ERROR:161: Cannot initialize TCL
+init.c(556):ERROR:161: Cannot initialize TCL
+init.c(556):ERROR:161: Cannot initialize TCL
+init.c(556):ERROR:161: Cannot initialize TCL
+Traceback (most recent call last):
+  File "/usr/local/software/spack/develop-290617/spack/opt/spack/linux-rhel7-x86_64/gcc-5.4.0/miniconda2-4.3.14-xjtq53hif5on35aajpyxy523u4mdwlja/bin/conda", line 7, in <module>
+    from conda.cli import main
+ImportError: No module named conda.cli
+Changed directory to /home/jtb34/GitHub/GACF/example/hpc.
+
+JobID: 10627818
+======
+Time: Tue  9 Apr 09:32:47 BST 2019
+Running on master node: cpu-e-480
+Current directory: /home/jtb34/GitHub/GACF/example/hpc
+
+Nodes allocated:
+================
+cpu-e-480
+
+numtasks=1, numnodes=1, mpi_tasks_per_node=1 (OMP_NUM_THREADS=1)
+
+Executing command:
+==================
+/home/jtb34/.conda/envs/env_gacf/bin/python poster_plots.py
+
+/home/jtb34/GitHub/GACF/NGTS/NGTS_Field.py:11: UserWarning: ngtsio not imported
+  warnings.warn("ngtsio not imported")
+/home/jtb34/GitHub/GACF/NGTS/GACF_utils/ngtsio_utils.py:10: UserWarning: ngtsio not imported
+  warnings.warn("ngtsio not imported")
+slurmstepd: error: *** JOB 10627818 ON cpu-e-480 CANCELLED AT 2019-04-09T09:46:19 ***
+slurmstepd: error: task_p_post_term: rmdir(/sys/fs/cgroup/cpuset/slurm10627818/slurm10627818.4294967294_0) failed Device or resource busy

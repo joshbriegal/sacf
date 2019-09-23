@@ -1,0 +1,20 @@
+ ######      ###     ######  ######## 
+##    ##    ## ##   ##    ## ##       
+##         ##   ##  ##       ##       
+##   #### ##     ## ##       ######   
+##    ##  ######### ##       ##       
+##    ##  ##     ## ##    ## ##       
+ ######   ##     ##  ######  ##    
+------------------------------
+Number of Data Points: 4391
+Number of Lag Timesteps: 4633
+Lag Resolution: 0.020434199
+------------------------------
+
+Altered 3.62490452557 to 3.56163740868
+Most likely periods [3.562]
+Signal spread 2.74092597054 times larger than daily spread
+Phased signal spread 1.10721838468 times larger than 0.05 phase spread
+peak periods: [3.6249045255665706, 3.4032418441270647]
+peak sizes: [964.8030492396371, 243.98618700143243]
+signal to noise None

@@ -1,0 +1,110 @@
+init.c(556):ERROR:161: Cannot initialize TCL
+init.c(556):ERROR:161: Cannot initialize TCL
+init.c(556):ERROR:161: Cannot initialize TCL
+init.c(556):ERROR:161: Cannot initialize TCL
+init.c(556):ERROR:161: Cannot initialize TCL
+init.c(556):ERROR:161: Cannot initialize TCL
+Traceback (most recent call last):
+  File "/usr/local/software/spack/develop-290617/spack/opt/spack/linux-rhel7-x86_64/gcc-5.4.0/miniconda2-4.3.14-xjtq53hif5on35aajpyxy523u4mdwlja/bin/conda", line 7, in <module>
+    from conda.cli import main
+ImportError: No module named conda.cli
+Changed directory to /home/jtb34/GitHub/GACF/example/hpc.
+
+JobID: 10675057
+======
+Time: Thu 11 Apr 10:00:41 BST 2019
+Running on master node: cpu-e-966
+Current directory: /home/jtb34/GitHub/GACF/example/hpc
+
+Nodes allocated:
+================
+cpu-e-966
+
+numtasks=1, numnodes=1, mpi_tasks_per_node=1 (OMP_NUM_THREADS=1)
+
+Executing command:
+==================
+/home/jtb34/.conda/envs/env_gacf/bin/python poster_plots.py
+
+/home/jtb34/GitHub/GACF/NGTS/NGTS_Field.py:11: UserWarning: ngtsio not imported
+  warnings.warn("ngtsio not imported")
+/home/jtb34/GitHub/GACF/NGTS/GACF_utils/ngtsio_utils.py:10: UserWarning: ngtsio not imported
+  warnings.warn("ngtsio not imported")
+WARNING: W35: None:5:0: W35: 'value' attribute required for INFO elements [astropy.io.votable.exceptions]
+WARNING: W35: None:9:0: W35: 'value' attribute required for INFO elements [astropy.io.votable.exceptions]
+WARNING: W35: None:10:0: W35: 'value' attribute required for INFO elements [astropy.io.votable.exceptions]
+WARNING: W35: None:11:0: W35: 'value' attribute required for INFO elements [astropy.io.votable.exceptions]
+WARNING: W35: None:13:0: W35: 'value' attribute required for INFO elements [astropy.io.votable.exceptions]
+no display found. Using non-interactive Agg backend
+Created TAP+ (v1.0.1) - Connection:
+	Host: gea.esac.esa.int
+	Use HTTPS: False
+	Port: 80
+	SSL Port: 443
+Found 13 fields
+matched 6967 of 7259 files. Loaded 6967 objects
+Loaded field in 36.9348371029 seconds
+Loaded Gaia params in 2.60203003883 seconds
+Finished Field in 39.550257206 seconds
+matched 3421 of 3596 files. Loaded 3421 objects
+Loaded field in 16.8071360588 seconds
+Loaded Gaia params in 1.35797905922 seconds
+Finished Field in 18.1708490849 seconds
+matched 6137 of 6396 files. Loaded 6137 objects
+Loaded field in 32.0254220963 seconds
+Loaded Gaia params in 2.36202788353 seconds
+Finished Field in 34.3981540203 seconds
+matched 3341 of 3490 files. Loaded 3341 objects
+Loaded field in 16.4673490524 seconds
+Loaded Gaia params in 1.25548195839 seconds
+Finished Field in 17.7284629345 seconds
+matched 8569 of 8927 files. Loaded 8569 objects
+Loaded field in 49.4514420033 seconds
+Loaded Gaia params in 3.18496108055 seconds
+Finished Field in 52.6510090828 seconds
+matched 9228 of 9610 files. Loaded 9228 objects
+Loaded field in 51.5092191696 seconds
+Loaded Gaia params in 3.41535592079 seconds
+Finished Field in 54.941740036 seconds
+matched 8957 of 9353 files. Loaded 8957 objects
+Loaded field in 43.8177120686 seconds
+Loaded Gaia params in 3.28621196747 seconds
+Finished Field in 47.1202130318 seconds
+matched 11154 of 11614 files. Loaded 11154 objects
+Loaded field in 49.0426621437 seconds
+Loaded Gaia params in 4.13438105583 seconds
+Finished Field in 53.1958401203 seconds
+matched 3580 of 3739 files. Loaded 3580 objects
+Loaded field in 20.9792718887 seconds
+Loaded Gaia params in 1.34281611443 seconds
+Finished Field in 22.3281018734 seconds
+matched 3574 of 3748 files. Loaded 3574 objects
+Loaded field in 16.8430688381 seconds
+Loaded Gaia params in 1.36692404747 seconds
+Finished Field in 18.2159118652 seconds
+matched 11419 of 11889 files. Loaded 11419 objects
+Loaded field in 48.5302259922 seconds
+Loaded Gaia params in 4.22745895386 seconds
+Finished Field in 52.7779328823 seconds
+matched 4402 of 4594 files. Loaded 4402 objects
+Loaded field in 22.401458025 seconds
+Loaded Gaia params in 1.73692107201 seconds
+Finished Field in 24.1459350586 seconds
+matched 10962 of 11414 files. Loaded 10962 objects
+Loaded field in 44.436136961 seconds
+Loaded Gaia params in 4.14636301994 seconds
+Finished Field in 48.6018841267 seconds
+NG0004-2950 3574 Gaia xmatches
+NG0535-0523 8957 Gaia xmatches
+NG1200-3633 11154 Gaia xmatches
+NG0409-1941 4402 Gaia xmatches
+NG0304-1115 3341 Gaia xmatches
+NG1429-3056 11419 Gaia xmatches
+NG0504-3633 6137 Gaia xmatches
+NG2142+0826 9228 Gaia xmatches
+NG2028-2518 10962 Gaia xmatches
+NG2346-3633 3421 Gaia xmatches
+NG2331-3922 3580 Gaia xmatches
+NG2126-1652 6967 Gaia xmatches
+NG1416-2518 8569 Gaia xmatches
+Query finished.

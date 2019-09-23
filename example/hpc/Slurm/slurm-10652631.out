@@ -1,0 +1,56 @@
+init.c(556):ERROR:161: Cannot initialize TCL
+init.c(556):ERROR:161: Cannot initialize TCL
+init.c(556):ERROR:161: Cannot initialize TCL
+init.c(556):ERROR:161: Cannot initialize TCL
+init.c(556):ERROR:161: Cannot initialize TCL
+init.c(556):ERROR:161: Cannot initialize TCL
+Traceback (most recent call last):
+  File "/usr/local/software/spack/develop-290617/spack/opt/spack/linux-rhel7-x86_64/gcc-5.4.0/miniconda2-4.3.14-xjtq53hif5on35aajpyxy523u4mdwlja/bin/conda", line 7, in <module>
+    from conda.cli import main
+ImportError: No module named conda.cli
+Changed directory to /home/jtb34/rds/hpc-work/GACF_OUTPUTS/NG1112-3345.
+
+JobID: 10652631
+======
+Time: Wed 10 Apr 13:50:39 BST 2019
+Running on master node: cpu-e-644
+Current directory: /home/jtb34/rds/hpc-work/GACF_OUTPUTS/NG1112-3345
+
+Nodes allocated:
+================
+cpu-e-644
+
+numtasks=1, numnodes=1, mpi_tasks_per_node=1 (OMP_NUM_THREADS=1)
+
+Executing command:
+==================
+/home/jtb34/.conda/envs/env_gacf/bin/python NGTSFieldRun.py
+
+2019-04-10 13:50:48,420 - __main__ - INFO - Using file /rds/user/jtb34/hpc-work/GACF_OUTPUTS/NG1112-3345/NG1112-3345_813_2018,2018S_CYCLE1807.fits
+no display found. Using non-interactive Agg backend
+Traceback (most recent call last):
+  File "NGTSFieldRun.py", line 245, in <module>
+    obj_list = map(int, f['CATALOGUE'].data['OBJ_ID'])
+  File "/home/jtb34/.conda/envs/env_gacf/lib/python2.7/site-packages/astropy/io/fits/hdu/hdulist.py", line 301, in __getitem__
+    self._positive_index_of(key))
+  File "/home/jtb34/.conda/envs/env_gacf/lib/python2.7/site-packages/astropy/io/fits/hdu/hdulist.py", line 721, in _positive_index_of
+    index = self.index_of(key)
+  File "/home/jtb34/.conda/envs/env_gacf/lib/python2.7/site-packages/astropy/io/fits/hdu/hdulist.py", line 691, in index_of
+    for idx, hdu in enumerate(self):
+  File "/home/jtb34/.conda/envs/env_gacf/lib/python2.7/site-packages/astropy/io/fits/hdu/hdulist.py", line 245, in __iter__
+    yield self[idx]
+  File "/home/jtb34/.conda/envs/env_gacf/lib/python2.7/site-packages/astropy/io/fits/hdu/hdulist.py", line 301, in __getitem__
+    self._positive_index_of(key))
+  File "/home/jtb34/.conda/envs/env_gacf/lib/python2.7/site-packages/astropy/io/fits/hdu/hdulist.py", line 1065, in _try_while_unread_hdus
+    if self._read_next_hdu():
+  File "/home/jtb34/.conda/envs/env_gacf/lib/python2.7/site-packages/astropy/io/fits/hdu/hdulist.py", line 1106, in _read_next_hdu
+    hdu = _BaseHDU.readfrom(fileobj, **kwargs)
+  File "/home/jtb34/.conda/envs/env_gacf/lib/python2.7/site-packages/astropy/io/fits/hdu/base.py", line 332, in readfrom
+    **kwargs)
+  File "/home/jtb34/.conda/envs/env_gacf/lib/python2.7/site-packages/astropy/io/fits/hdu/base.py", line 397, in _readfrom_internal
+    header = Header.fromfile(data, endcard=not ignore_missing_end)
+  File "/home/jtb34/.conda/envs/env_gacf/lib/python2.7/site-packages/astropy/io/fits/header.py", line 449, in fromfile
+    padding)[1]
+  File "/home/jtb34/.conda/envs/env_gacf/lib/python2.7/site-packages/astropy/io/fits/header.py", line 518, in _from_blocks
+    raise IOError('Header missing END card.')
+IOError: Header missing END card.
