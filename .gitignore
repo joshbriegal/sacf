@@ -27,3 +27,4 @@ example/Blanco1/
 *.mov
 *.mp4
 *._*
+/GACF/pybind11/
