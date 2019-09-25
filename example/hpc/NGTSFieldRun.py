@@ -17,7 +17,7 @@ logging.captureWarnings(True)
 import matplotlib as mpl
 
 if os.environ.get('DISPLAY', '') == '':
-    print('no display found. Using non-interactive Agg backend')≤
+    print('no display found. Using non-interactive Agg backend')
     mpl.use('Agg')
 
 # on server
@@ -152,6 +152,7 @@ def worker(object_list, fits_file, root_file, fieldname, cycle,  plogger):
         bad_objects = [o for o in object_list if o not in field.object_list]
         plogger.info('Loaded {}, Num objects: {}'.format(field, field.num_objects))
         field.get_new_moon_epoch()
+        field.get_ratio_estimator()
     for obj in field:
         obj.tbin = 30
         obj.lag_resolution = 30 * TIME_CONVERSIONS['m2d']
@@ -179,7 +180,9 @@ def worker(object_list, fits_file, root_file, fieldname, cycle,  plogger):
                     else:
                         moon_ok = True
                 if fourier_ok and moon_ok:
-                    signal_ok = obj.check_signal_significance(epoch=field.new_moon_epoch)
+                    # signal_ok = obj.check_signal_significance(epoch=field.new_moon_epoch)
+                    signal_ok = obj.check_signal_significance_estimator(field.ratio_estimator, 
+                                                                        min_prob=0.7, epoch=field.new_moon_epoch)
                     if signal_ok:
                         pdic[obj.obj] = obj.cleaned_refined_periods
                     else:

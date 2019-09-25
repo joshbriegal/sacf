@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import binned_statistic
 from scipy.signal import savgol_filter
+from scipy.optimize import curve_fit
 from astropy.time import Time
 from astropy.coordinates import get_moon, get_sun
 from .ngtsio_utils import NGTS_EPOCH, medsig
@@ -202,20 +203,131 @@ def split_and_compute_percentile_per_specified_time_period(t, f, tref, dt, perce
         spread = np.nanmedian(fpn)
     return spread
 
+def check_for_gaps_at_full_moon(phase, binned_phase, moon_min=0.4, moon_max=0.6):
+
+    hist, edges = np.histogram(phase, bins=np.linspace(0, 1, len(binned_phase) + 1))
+    mean_pts = np.mean(hist)
+    stdev_pts = np.std(hist)
+    
+    empty_moon_bins = False
+    min_bin = np.inf
+    min_bin_in = False
+    nmissing_in = nmissing_out = 0
+    bins_with_low_points = []
+    for pv, hv in zip(binned_phase, hist):
+        lim_check = (0.4 < pv < 0.6)
+        if hv < min_bin:
+            min_bin = hv
+            if lim_check:
+                min_bin_in = True
+            else:
+                min_bin_in = False
+        if lim_check and hv == 0:
+            empty_moon_bins = True
+        if hv < (mean_pts - stdev_pts):
+            bins_with_low_points.append(pv)
+            if lim_check:
+                nmissing_in += 1
+            else:
+                nmissing_out += 1
+                
+    missing_moon_data = min_bin_in and (nmissing_in >= nmissing_out)
+
+    return empty_moon_bins, missing_moon_data
+
+
+def fit_moon_model_to_data(phase_app, data_app, turnover_bottom_limit=0.4, turnover_top_limit=0.8):
+    phase_app = np.array(phase_app)
+    data_app = np.array(data_app)
+    half_phase_app = np.array(fold_phase_in_half(phase_app))
+    popt, pcov = curve_fit(define_fit_function, half_phase_app, data_app,
+                           [0.8, 1.0, 1.0], 
+                           bounds=(0, [1, max(data_app), max(data_app)]))
+    perr = np.sqrt(np.diag(pcov))
+
+    turnover = popt[0]
+    h1 = popt[1]
+    h2 = popt[2]
+
+    turnover_err = perr[0]
+    h1_err = perr[1]
+    h2_err = perr[2]
+
+    rms = split_and_compute_rms(phase_app, data_app, 0, 0.05)
+    pre_rms = split_and_compute_rms(half_phase_app[half_phase_app < turnover],
+                                    data_app[half_phase_app < turnover], 0, 0.05)
+    post_rms = split_and_compute_rms(half_phase_app[half_phase_app >= turnover],
+                                     data_app[half_phase_app >= turnover], 0, 0.05)
+    
+    diff_vs_rms = abs(h1 - h2) / rms
+    RMS_change = post_rms / pre_rms
+    RMS_fold = np.mean([pre_rms, post_rms]) / rms
+    bottom_tp = turnover - turnover_err
+    top_tp = turnover + turnover_err
+    
+    in_range = ((turnover_bottom_limit < bottom_tp < turnover_top_limit) and
+                (turnover_bottom_limit < top_tp    < turnover_top_limit))
+    
+    gradient = (h2 - h1) / (1 - turnover)
+    
+    max_height = max(h2, h1)
+    if max_height == h2:
+        max_second = True
+    else:
+        max_second = False
+    # if either point in this region => points overlap, not significant
+    lower_overlap = h2 - h2_err if max_second else h1 - h1_err
+    upper_overlap = h1 + h1_err if max_second else h2 + h2_err
+    
+    ends_overlap = False
+    for h in [h1, h2]:
+        if lower_overlap < h < upper_overlap:
+            ends_overlap = True
+
+    return RMS_change, RMS_fold, in_range, gradient, diff_vs_rms, ends_overlap, popt
+
+
+def split_time_series(t, f, tref, dt):
+    t = np.array(t)
+    f = np.array(f)
+    
+    treg = np.concatenate([np.r_[tref: t.min(): -dt][::-1],
+                           np.r_[tref + dt: t.max():  dt]])
+    nreg = len(treg)
+    if nreg == 0 and (np.min(t) + dt > np.max(t)):
+        # take whole series as input
+        treg = [np.min(t)]
+        nreg = 1
+    freg = np.zeros(nreg) + np.nan
+    return treg, freg, nreg
+
+
+def split_and_compute_rms(t, f, tref, dt):
+    with np.errstate(divide='ignore', invalid='ignore'):
+        t = np.array(t)
+        f = np.array(f)
+        fpn = []
+        treg, freg, nreg = split_time_series(t,f, tref, dt)
+        for j in np.arange(nreg):
+                l = np.logical_and((t >= treg[j]), (t < treg[j] + dt))
+                if l.any():
+                    # compute
+                    fsl = f[l]
+                    fpn.append(np.std(fsl))
+        fpn = np.array(fpn)
+        #     spread = np.median(fpn[:,1]-fpn[:,0])
+        #     spread = np.median(np.diff(fpn))
+        rms = np.nanmedian(fpn)
+    return rms
+
+
 def split_and_compute_percentile_per_specified_time_period(t, f, tref, dt,
                                                            percentiles=[10., 90.], nsigma=None):
     with np.errstate(divide='ignore', invalid='ignore'):
         t = np.array(t)
         f = np.array(f)
         fpn = []
-        treg = np.concatenate([np.r_[tref: t.min(): -dt][::-1],
-                               np.r_[tref + dt: t.max():  dt]])
-        nreg = len(treg)
-        if nreg == 0 and (np.min(t) + dt > np.max(t)):
-            # take whole series as input
-            treg = [np.min(t)]
-            nreg = 1
-        freg = np.zeros(nreg) + np.nan
+        treg, freg, nreg = split_time_series(t,f, tref, dt)
         for j in np.arange(nreg):
             l = np.logical_and((t >= treg[j]), (t < treg[j] + dt))
             if l.any():
@@ -232,6 +344,31 @@ def split_and_compute_percentile_per_specified_time_period(t, f, tref, dt,
     #     spread = np.median(np.diff(fpn))
         spread = np.nanmedian(fpn)
     return spread
+
+
+def half_phase(p):
+    if 0.0 <= p <= 0.5:
+        return 2.0 * p
+    elif 0.5 < p <= 1.0:
+        return 2.0 - (2 * p)
+    else:
+        return np.nan
+
+
+def fold_phase_in_half(phase):
+    return map(half_phase, phase)
+
+
+def define_fit_function(phase, X, h1, h2):
+    # 3 parameter fit. Straight line at h1 up to phase X, slope from h1 to h2 from X to 1.
+    def funn(p, X, h1, h2):
+        if 0 <= p <= X:
+            return h1
+        elif X < p <= 1.0:
+            return np.interp(p, (X, 1), (h1, h2))
+        else:
+            return np.nan
+    return [funn(p, X, h1, h2) for p in phase]
 
 
 def moon_phase_angle(time, ephemeris=None):

@@ -6,6 +6,7 @@
 /example/Vedad
 /example/processed
 **/*NG*/
+**.DS_Store
 /example/JamesJackmanWork
 *.png
 *.gif
@@ -27,4 +28,5 @@ example/Blanco1/
 *.mov
 *.mp4
 *._*
+example/hpc/*.out
 /GACF/pybind11/

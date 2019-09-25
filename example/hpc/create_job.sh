@@ -87,19 +87,25 @@ then
     if [ $? -eq 0 ]
     then
         echo "$XMATCHFILE exists"
+        COPYXMATCH="true"
     else
         echo "$XMATCHFILE does not exist"
-        exit 1
+        COPYXMATCH="false"
+        # exit 1  # exit if XMATCH doesn't exist (currently /wasp/scratch is down.)
     fi
 fi
 
+# copy scripts over regardless of options
 cp "$NGTSFIELDRUN" "$HPCDIR"
 sed "s/YEET/$FIELDNAME/g" "$SBATCHSCRIPT" > "$HPCDIR/$FIELDNAME.peta4-skylake"
 
 if [ "$COPYDATA" == "true" ]
 then
-    echo "Copying xmatch data"
-    scp ${USERNAME}@${NGTSHEAD}:${XMATCHFILE} ${HPCXMATCHDIR}
+    if [ "$COPYXMATCH" == "true" ]
+    then
+        echo "Copying xmatch data"
+        scp ${USERNAME}@${NGTSHEAD}:${XMATCHFILE} ${HPCXMATCHDIR}
+    fi
     echo "Generating fits file"
     ssh $USERNAME@$NGTSHEAD "cd ${FITSLOCATION}; ${FITSLOCATION}${NGPHOTGET}"
 
