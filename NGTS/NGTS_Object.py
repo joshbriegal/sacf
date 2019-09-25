@@ -160,11 +160,16 @@ class NGTSObject(object):
         return
 
     def get_data_from_dict(self, dic, nsig2keep=5,
-                           do_relflux=True, min_points=500):  # if getting data using multiple lcs
+                           do_relflux=True, min_points=500, return_flags=False):  # if getting data using multiple lcs
         if not isinstance(dic["OBJ_ID"], list):
-            self.flux, self.timeseries, self.median_flux, self.flux_std_dev, self.num_observations, self.ok, message = \
-                utils.clean_ngts_data(
-                    dic, nsig2keep=nsig2keep, do_relflux=do_relflux, min_points=min_points)
+            if return_flags:
+                self.flux, self.timeseries, self.median_flux, self.flux_std_dev, self.num_observations, self.ok, message, self.flags = \
+                    utils.clean_ngts_data(
+                        dic, nsig2keep=nsig2keep, do_relflux=do_relflux, min_points=min_points, return_flags=True)
+            else:
+                self.flux, self.timeseries, self.median_flux, self.flux_std_dev, self.num_observations, self.ok, message = \
+                    utils.clean_ngts_data(
+                        dic, nsig2keep=nsig2keep, do_relflux=do_relflux, min_points=min_points)
             self.message += message
             return
         else:
@@ -183,9 +188,14 @@ class NGTSObject(object):
                         new_dic[key] = new_dic[key][0]
                 except TypeError:
                     new_dic[key] = dic[key]
-                    self.flux, self.timeseries, self.median_flux, self.flux_std_dev, self.num_observations, self.ok, message = \
-                        utils.clean_ngts_data(
-                            new_dic, nsig2keep=nsig2keep, do_relflux=do_relflux)
+                    if return_flags:
+                        self.flux, self.timeseries, self.median_flux, self.flux_std_dev, self.num_observations, self.ok, message, self.flags = \
+                            utils.clean_ngts_data(
+                                new_dic, nsig2keep=nsig2keep, do_relflux=do_relflux, return_flags=True)
+                    else:
+                        self.flux, self.timeseries, self.median_flux, self.flux_std_dev, self.num_observations, self.ok, message = \
+                            utils.clean_ngts_data(
+                                new_dic, nsig2keep=nsig2keep, do_relflux=do_relflux)
                     self.message += message
                     return
 
@@ -462,7 +472,8 @@ class NGTSObject(object):
             self.safe_log('Most likely periods {}'.format(print_list))
             return self.cleaned_refined_periods
 
-    def check_moon_detection(self, moon_epoch, period=None, shape_or_noise=True):
+    def check_moon_detection(self, moon_epoch, period=None, shape_or_noise=True,
+                             moon_min=25.0, moon_max=32.0):
         is_moon = True
         if period is None:
             if len(self.cleaned_refined_periods) > 0:
@@ -472,10 +483,18 @@ class NGTSObject(object):
 #                 self.safe_log('No Periods Found')
                 return is_moon
         # is period within range 25 - 30 days?
-        if not 25.0 < period < 32.0:
-            is_moon = False
-            self.safe_log('NOT MOON: Rejected on period range')
-            return is_moon
+        if not moon_min < period < moon_max:
+            # is double the period or half the period within this range?
+            if moon_min < 2.0 * period < moon_max:
+                self.safe_log('Possible half moon, using double period')
+                period = 2.0 * period
+            elif moon_min < 0.5 * period < moon_max:
+                self.safe_log('Possible double moon, using half period')
+                period = 0.5 * period
+            else:
+                self.safe_log('NOT MOON: Rejected on period range')
+                is_moon = False
+                return is_moon
         # is there a noticable change in the LC around 0.5 phase from new moon?
         t = self.timeseries_binned
         f = self.flux_binned
@@ -483,62 +502,107 @@ class NGTSObject(object):
         binned_phase_app, binned_data_app = utils.bin_phase_curve(
             phase_app, data_app)
 
-        idx_in = np.array([i for i in range(len(phase_app))
-                           if 0.4 < phase_app[i] < 0.6])
-        idx_out = np.array(
-            [i for i in range(len(phase_app)) if i not in idx_in])
-        idx_in_bin = [i for i in range(
-            len(binned_phase_app)) if 0.4 < binned_phase_app[i] < 0.6]
-        idx_out_bin = [i for i in range(
-            len(binned_phase_app)) if i not in idx_in_bin]
+        empty_moon_bins, missing_moon_data = utils.check_for_gaps_at_full_moon(phase_app, binned_phase_app)
 
-        med_out, sig_out = utils.medsig(np.array(data_app)[idx_out])
-        med_in, sig_in = utils.medsig(np.array(data_app)[idx_in])
-
-        mean_diff_in = np.mean(np.diff(binned_data_app[idx_in_bin]))
-        mean_diff_out = np.mean(np.diff(binned_data_app[idx_out_bin]))
-
-#         fig, ax = plt.subplots(figsize=(10,5))
-#         ax.scatter(phase_app[idx_in], data_app[idx_in], s=0.1, c='r')
-#         ax.scatter(phase_app[idx_out], data_app[idx_out], s=0.1, c='g')
-#         ax.axhline(med_in, color='r')
-#         ax.axhline(med_out, color='g')
-#         ax.axhspan(med_in-sig_in, med_in+sig_in, color='r', alpha=0.2)
-#         ax.axhspan(med_out-sig_out, med_out+sig_out, color='g', alpha=0.2)
-#         plt.show()
-    #     print 'Outside: {}  {}'.format(med_out, sig_out)
-    #     print 'Inside: {}  {}'.format(med_in, sig_in)
-
-        if (not sig_in > sig_out):
-            self.safe_log('NOT MOON: Rejected on noise threshold')
-            noise_crit = False
+        if empty_moon_bins or missing_moon_data:
+            is_moon = True
+            self.safe_log('MOON SIGNAL: Data missing at full moon')
         else:
-            self.safe_log('MOON: Noise criterion suggests moon')
-            noise_crit = True
-        if (not abs(med_in - med_out) > sig_out):
-            self.safe_log('NOT MOON: Rejected on signal shape')
-            shape_crit = False
-    #         print 'Outside: {}  {}'.format(med_out, sig_out)
-    #         print 'Inside: {}  {}'.format(med_in, sig_in)
-        else:
-            self.safe_log('MOON: Signal shape suggests moon')
-            shape_crit = True
-            if med_in > med_out:
-                self.safe_log('MOON SIGNAL HIGHER')
+            (RMS_change, RMS_fold,
+             in_range, gradient,
+             diff_vs_rms, ends_overlap,
+             model_params) = utils.fit_moon_model_to_data(phase_app, data_app)
+
+            is_moon = (RMS_change > 1.0) and (RMS_fold < 1.5) and in_range and (not ends_overlap)
+
+            self.safe_log('Moon model fit parameters [turnover, h1, h2]: {}'.format(model_params))
+            self.safe_log('Moon model gradient: {} ({}overlap)'.format(gradient, '' if ends_overlap else 'no '))
+            self.safe_log('RMS change after folding (symmetry indicator): {}'.format(RMS_fold))
+            self.safe_log('RMS change after turnover: {}'.format(RMS_change))
+            self.safe_log('RMS of model vs. data: {}'.format(diff_vs_rms))
+
+            if is_moon:
+                self.safe_log('MOON SIGNAL: Model fit good')
             else:
-                self.safe_log('MOON SIGNAL LOWER')
-        if mean_diff_in <= mean_diff_out:
-            self.safe_log('NOT MOON: Rejected on flatness criterion')
-            diff_crit = False
-        else:
-            self.safe_log('MOON: Flatness criterion suggests moon')
-            diff_crit = True
+                self.safe_log('NOT MOON: Model fit bad')
 
-        is_moon = True if sum(
-            1 for ct in [noise_crit, diff_crit, shape_crit] if ct) >= 2 else False
         if is_moon:
             self.safe_log('Moon period removed: {} days'.format(period))
+        else:
+            self.safe_log('Period {} days not removed, not moon.'.format(period))
         return is_moon
+
+
+
+
+
+#         idx_in = np.array([i for i in range(len(phase_app))
+#                            if 0.4 < phase_app[i] < 0.6])
+#         idx_out = np.array(
+#             [i for i in range(len(phase_app)) if i not in idx_in])
+#         idx_in_bin = [i for i in range(
+#             len(binned_phase_app)) if 0.4 < binned_phase_app[i] < 0.6]
+#         idx_out_bin = [i for i in range(
+#             len(binned_phase_app)) if i not in idx_in_bin]
+
+#         med_out, sig_out = utils.medsig(np.array(data_app)[idx_out])
+#         med_in, sig_in = utils.medsig(np.array(data_app)[idx_in])
+
+#         stddev_from_flat_out = np.std(np.array(data_app)[idx_out] - med_out)
+#         stddev_from_flat_in = np.std(np.array(data_app)[idx_in] - med_in)
+
+#         mean_diff_in = np.mean(np.diff(binned_data_app[idx_in_bin]))
+#         mean_diff_out = np.mean(np.diff(binned_data_app[idx_out_bin]))
+
+# #         fig, ax = plt.subplots(figsize=(10,5))
+# #         ax.scatter(phase_app[idx_in], data_app[idx_in], s=0.1, c='r')
+# #         ax.scatter(phase_app[idx_out], data_app[idx_out], s=0.1, c='g')
+# #         ax.axhline(med_in, color='r')
+# #         ax.axhline(med_out, color='g')
+# #         ax.axhspan(med_in-sig_in, med_in+sig_in, color='r', alpha=0.2)
+# #         ax.axhspan(med_out-sig_out, med_out+sig_out, color='g', alpha=0.2)
+# #         plt.show()
+#     #     print 'Outside: {}  {}'.format(med_out, sig_out)
+#     #     print 'Inside: {}  {}'.format(med_in, sig_in)
+
+#         if (not sig_in > sig_out):
+#             self.safe_log('NOT MOON: Rejected on noise threshold')
+#             noise_crit = False
+#         else:
+#             self.safe_log('MOON: Noise criterion suggests moon')
+#             noise_crit = True
+#         if (not stddev_from_flat_in > stddev_from_flat_out):
+#             self.safe_log('NOT MOON: Rejected on std dev threshold')
+#             stdev_crit = False
+#         else:
+#             self.safe_log('MOON: Std dev criterion suggests moon')
+#             stdev_crit = True
+#         if (not abs(med_in - med_out) > sig_out):
+#             self.safe_log('NOT MOON: Rejected on signal shape')
+#             shape_crit = False
+#     #         print 'Outside: {}  {}'.format(med_out, sig_out)
+#     #         print 'Inside: {}  {}'.format(med_in, sig_in)
+#         else:
+#             self.safe_log('MOON: Signal shape suggests moon')
+#             shape_crit = True
+#             if med_in > med_out:
+#                 self.safe_log('MOON SIGNAL HIGHER')
+#             else:
+#                 self.safe_log('MOON SIGNAL LOWER')
+#         if mean_diff_in <= mean_diff_out:
+#             self.safe_log('NOT MOON: Rejected on flatness criterion')
+#             diff_crit = False
+#         else:
+#             self.safe_log('MOON: Flatness criterion suggests moon')
+#             diff_crit = True
+
+#         is_moon = True if sum(
+#             1 for ct in [noise_crit, diff_crit, shape_crit, stdev_crit] if ct) >= 2 else False
+#         if is_moon:
+#             self.safe_log('Moon period removed: {} days'.format(period))
+#         else:
+#             self.safe_log('Period {} days not removed, not moon.'.format(period))
+#         return is_moon
 
     def check_fourier_ok(self, nlim=20, peakpct=0.5, npeakstocheck=3, binary_check=0.8):
         is_ok = True
@@ -581,21 +645,30 @@ class NGTSObject(object):
             return is_ok
         return is_ok
 
-    def check_signal_significance(self, p=None, epoch=0, signal_threshold=2.5,
-                                  phase_threshold=1.4, phase_period_threshold=2.5,
-                                  return_ratios=False):
+    def calculate_signal_strength_ratios(self, p=None, epoch=0):
         if p is None:
             p = self.cleaned_refined_periods[0]
+
+        t = self.timeseries_binned
+        f = self.flux_binned
+
         tref = (Time(Time(np.median(self.timeseries_binned) + utils.NGTS_EPOCH, format='jd')
                      .to_datetime().replace(hour=12, minute=0, second=0)).jd - utils.NGTS_EPOCH)
-        phase_app, data_app = utils.append_to_phase(utils.create_phase(
-            self.timeseries_binned, p, epoch), self.flux_binned)
+        phase_app, data_app = utils.append_to_phase(
+            utils.create_phase(t, p, epoch), f, 0)
+        binned_phase_app, binned_data_app = utils.bin_phase_curve(
+            phase_app, data_app)
+        tref = (Time(Time(np.median(t) + utils.NGTS_EPOCH, format='jd').to_datetime()
+                     .replace(hour=12, minute=0, second=0)).jd - utils.NGTS_EPOCH)
         pref = np.mod(tref - epoch, p) / p
-        spread1 = utils.split_and_compute_percentile_per_specified_time_period(self.timeseries_binned,
-                                                                               self.flux_binned, tref, 1, nsigma=3)  # nightly spread
-        spread2 = utils.split_and_compute_percentile_per_specified_time_period(self.timeseries_binned,
-                                                                               self.flux_binned, tref, p)  # spread in 'signal
+
+        spread1 = utils.split_and_compute_percentile_per_specified_time_period(
+            t, f, tref, 1, nsigma=3)
+        spread2 = utils.split_and_compute_percentile_per_specified_time_period(
+            t, f, tref, p)
+
         signal_spread_ratio = spread2 / spread1
+
         spread1_phase = utils.split_and_compute_percentile_per_specified_time_period(
             phase_app, data_app, 0, 0.05, nsigma=3)
         spread2_phase = utils.split_and_compute_percentile_per_specified_time_period(
@@ -603,11 +676,11 @@ class NGTSObject(object):
 
         phase_spread_ratio = spread2_phase / spread1_phase
 
-        if p >= 15.:
+        if p >= 15:
             nperiods = 1
-        elif 5. < p < 15.:
+        elif 5 < p < 15:
             nperiods = 2
-        elif 1. < p < 5.:
+        elif 1 < p < 5:
             nperiods = 3
         else:
             nperiods = 1
@@ -628,9 +701,17 @@ class NGTSObject(object):
                 pp_ratio = spread2_phase / spread1_phase
             spread_ratios.append(
                 pp_ratio) if pp_ratio != np.inf else spread_ratios.append(np.nan)
-#         print spread_ratios
-#         print np.nanpercentile(spread_ratios, [10., 50., 90.])
         phased_signal_spread_ratio = np.nanmean(spread_ratios)
+
+        return signal_spread_ratio, phase_spread_ratio, phased_signal_spread_ratio
+
+    def check_signal_significance(self, p=None, epoch=0, signal_threshold=2.5,
+                                  phase_threshold=1.4, phase_period_threshold=2.5,
+                                  return_ratios=False):
+
+        (signal_spread_ratio,
+            phase_spread_ratio,
+            phased_signal_spread_ratio) = self.calculate_signal_strength_ratios(p=p, epoch=epoch)
 
         self.safe_log('Signal spread {} times larger than daily spread'.format(
             signal_spread_ratio))
@@ -647,6 +728,30 @@ class NGTSObject(object):
         else:
             return False  # bad
             self.safe_log('Signal Below Threshold - Period Rejected')
+
+    def check_signal_significance_estimator(self, estimator, min_prob=0.7, p=None, epoch=0):
+
+        ratios = self.calculate_signal_strength_ratios(p=p, epoch=epoch)
+
+        self.safe_log('Signal spread {} times larger than daily spread'.format(
+            ratios[0]))
+        self.safe_log('Phased signal spread {} times larger than 0.05 phase spread'.format(
+            ratios[1]))
+        self.safe_log('Phased signal spread per period {} times larger than 0.05 phase spread'.format(
+            ratios[2]))
+
+        output_class, probs = utils.classify_object_ratios(
+            estimator, ratios, min_prob=min_prob, return_probs=True)
+
+        self.safe_log('Outputted class probs: {:.2f} negative, {:.2f} positive'.format(probs[0][0], probs[0][1]))
+
+        if output_class:
+            self.safe_log('Signal Threshold Exceeded - Period OK')
+            return True  # good
+        else:
+            self.safe_log('Signal Below Threshold - Period Rejected')
+            return False  # bad
+        
 
     def remove_moon_and_check_ok(self, new_moon_epoch, period=None):
         is_ok = False
@@ -675,7 +780,6 @@ class NGTSObject(object):
 
         fourier_ok = self.check_fourier_ok(nlim=5)
         if fourier_ok:
-            shape_or_noise = False if abs(new_period - period) > 1.0 else True
             is_moon = self.check_moon_detection(new_moon_epoch)
             if is_moon:
                 self.safe_log('Moon detected again afer removal')

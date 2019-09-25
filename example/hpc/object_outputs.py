@@ -100,7 +100,7 @@ for f in os.listdir(ROOT_DIR):
 print "Found {} fields".format(len(fieldnames))
 # print fieldnames
 # fieldnames = fieldnames[1:5]
-# fieldnames = ['NG2346-3633']
+fieldnames = ['NG2142+0826']
 
 for field in fieldnames:
     field_dir = os.path.join(ROOT_DIR, field)
@@ -156,8 +156,8 @@ fields = {}
 # gfields = {}
 
 for fieldname in fieldnames:
-    if fieldname != 'NG0524-3056':
-        continue
+#     if fieldname != 'NG0524-3056':
+#         continue
     t1 = time.time()
     try:
         field = return_field_from_object_directory(ROOT_DIR, fieldname, test='CYCLE1807',
@@ -261,7 +261,7 @@ class_colours = {
     'error': 'w'
 }
 
-with PdfPages('/home/jtb34/GitHub/GACF/example/hpc/Object_Outputs_low_mass.pdf') as pdf:
+with PdfPages('/home/jtb34/GitHub/GACF/example/hpc/ ') as pdf:
     keypage = plt.figure(figsize=(8.27, 11.69))
     gs = gridspec.GridSpec(ncols=3, nrows=len(class_colours))
     i = 0

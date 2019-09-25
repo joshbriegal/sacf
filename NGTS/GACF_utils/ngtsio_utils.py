@@ -92,7 +92,8 @@ def get_ngts_data(fieldname, obj_id, ngts_version, nsig2keep=None, do_relflux=Tr
             return clean_ngts_data(dic, nsig2keep=nsig2keep, do_relflux=do_relflux)
 
 
-def clean_ngts_data(dic, nsig2keep=None, do_relflux=True, bad_data_ratio_threshold=0.2, min_points=500):
+def clean_ngts_data(dic, nsig2keep=None, do_relflux=True, bad_data_ratio_threshold=0.2, min_points=500,
+                    return_flags=False):
     is_ok = True
     dic['SYSREM_FLUX3'][np.where(dic['FLAGS'] != 0.)] = np.nan
     message = ''
@@ -112,6 +113,7 @@ def clean_ngts_data(dic, nsig2keep=None, do_relflux=True, bad_data_ratio_thresho
     timeseries = dic['HJD'][idx_ok] / TIME_CONVERSIONS['d2s']
     flux = flux[idx_ok]
     median_flux, flux_std_dev = medsig(flux)
+    flags = dic['FLAGS'][idx_ok]
     if do_relflux:
         flux /= median_flux
     num_observations = len(timeseries)
@@ -123,7 +125,10 @@ def clean_ngts_data(dic, nsig2keep=None, do_relflux=True, bad_data_ratio_thresho
     #         print ratio, is_ok
     except ZeroDivisionError:
         is_ok = False
-    return flux, timeseries, median_flux, flux_std_dev, num_observations, is_ok, message
+    if return_flags:
+        return flux, timeseries, median_flux, flux_std_dev, num_observations, is_ok, message, flags
+    else:
+        return flux, timeseries, median_flux, flux_std_dev, num_observations, is_ok, message
 
 
 def rebin_err(t, f, dt=0.02, get_err_on_mean=False, bin_about=None):

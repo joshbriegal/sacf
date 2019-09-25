@@ -16,7 +16,7 @@ from multiprocessing import Pool, cpu_count
 import pickle
 from copy import deepcopy
 import os
-from GACF_utils import get_ngts_data, ClassEncoder, NGTSObjectDecoder, pop_dict_item, clean_data_dict, get_new_moon_epoch
+from GACF_utils import get_ngts_data, ClassEncoder, NGTSObjectDecoder, pop_dict_item, clean_data_dict, get_new_moon_epoch, load_classifier
 import json
 import matplotlib.pyplot as plt
 import numpy as np
@@ -111,13 +111,16 @@ def return_field_from_object_directory(root_directory, fieldname, test=None, sil
                 continue
             obj_file = os.path.join(filename, obj_file)
             if object_json_filename in os.listdir(obj_file):
-                with open(os.path.join(obj_file, object_json_filename), 'r') as jso:
-                    obj = return_object_from_json_string(jso.read())
-                    obj.remove_logger()
-                    obj.filename = obj_file
-                    field.objects[obj_id] = obj
-                    obj = None
+                try:
+                    with open(os.path.join(obj_file, object_json_filename), 'r') as jso:
+                        obj = return_object_from_json_string(jso.read())
+                        obj.remove_logger()
+                        obj.filename = obj_file
+                        field.objects[obj_id] = obj
+                        obj = None
             #                     jso.close()
+                except ValueError:  # JSON error
+                    continue
             else:
                 if include_empty_objects:
                     field.objects[obj_id] = NGTSObject(obj=obj_id, field=field.fieldname, test=field.test,
@@ -150,6 +153,8 @@ class NGTSField(object):
             self.create_logger(to_console=log_to_console)
         else:
             self.logger = logger
+
+        self.ratio_estimator = None
             
     def __str__(self):
         return "NGTS Field " + self.fieldname
@@ -313,7 +318,7 @@ class NGTSField(object):
     #         self.remove_bad_objects()
 
     def load_from_fits(self, filename, obj_ids=None, num_objs=None, method='astropy',
-                       bin=True, delete_unbinned=True, clean_data=True, sparse_ids=False):
+                       bin=True, delete_unbinned=True, clean_data=True, sparse_ids=False, return_flags=False):
         if obj_ids and sparse_ids:
             if len(obj_ids) == 1:
                 sparse_ids = False # TODO why does only 1 object break?
@@ -376,7 +381,7 @@ class NGTSField(object):
 #            print type(dic['OBJ_ID'])
             obj_id = int(dic['OBJ_ID'])
             try:
-                self[obj_id].get_data_from_dict(dic)
+                self[obj_id].get_data_from_dict(dic, return_flags=return_flags)
             except KeyError:
                 warnings.warn('No data found for object {}'.format(obj_id))
             if bin:
@@ -395,7 +400,7 @@ class NGTSField(object):
                         'HJD': dic['HJD'][idx][0],
                         'FLAGS': dic['FLAGS'][idx][0],
                     }
-                    self[obj_id].get_data_from_dict(obj_data)
+                    self[obj_id].get_data_from_dict(obj_data, return_flags=return_flags)
                 except Exception as e:
                     self.logger.exception('No data loaded for object {}'.format(self[obj_id]))
                     self[obj_id].ok = False
@@ -551,6 +556,9 @@ class NGTSField(object):
         max_obj = max(observations, key=lambda x: x[1])[0]
         self.new_moon_epoch,_,_ = get_new_moon_epoch(self[max_obj].timeseries_binned)
         return self.new_moon_epoch
+
+    def get_ratio_estimator(self):
+        self.ratio_estimator = load_classifier()
 
 
 def chunk_list(big_list, small_list_size):
