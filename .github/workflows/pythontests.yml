@@ -14,8 +14,8 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v2.0.0
-    - name: Checkout submodules
-      uses: textbook/git-checkout-submodule-action@2.0.0
+#    - name: Checkout submodules
+#      uses: textbook/git-checkout-submodule-action@2.0.0
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v1
       with:
