@@ -1,4 +1,4 @@
-![Python Test Status](https://github.com/joshbriegal/GACF/workflows/Python%20tests/badge.svg)
+![Python Test Status](https://github.com/joshbriegal/gacf/workflows/Python%20tests/badge.svg)
   
 # Generalised Autocorrelation Function 
 (credit Larz Kreutzer, c++ implementation by Josh Briegal jtb34@cam.ac.uk)
@@ -10,12 +10,12 @@ Requirements:
 
 From above top level directory run
 ```
-pip install ./GACF
+pip install ./gacf
 ```
 in python:
 
 ```python
-from GACF import *
+from gacf import *
 
 lag_timeseries, correlations, corr_object = find_correlation_from_file('filepath')
 ```
@@ -30,7 +30,7 @@ max_lag=None, lag_resolution=None, selection_function='natural', weight_function
 
 new c++ implementation, should be faster:
 ```python
-from GACF import *
+from gacf import *
 
 lag_timeseries, correlations, corr_object = find_correlation_from_lists_cpp(timeseries, values, errors=None)
 ```

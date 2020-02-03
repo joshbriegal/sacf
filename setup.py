@@ -80,14 +80,14 @@ class CMakeBuild(build_ext):
         subprocess.check_call(['cmake', '--build', '.'] + build_args, cwd=self.build_temp)
 
 setup(
-    name='GACF',
+    name='gacf',
     version='0.3',
     author='Joshua Briegal',
     author_email='jtb34@cam.ac.uk',
     description='A generalisation of the autocorrelation function, for non-uniformly sampled timeseries data',
     long_description='',
-    packages=['GACF'],
-    ext_modules=[CMakeExtension('GACF.correlator', 'GACF'), CMakeExtension('GACF.datastructure', 'GACF')],
+    packages=['gacf'],
+    ext_modules=[CMakeExtension('gacf.correlator', 'gacf'), CMakeExtension('gacf.datastructure', 'gacf')],
     cmdclass=dict(build_ext=CMakeBuild,
                   test=PyTest),
     tests_require=['pytest'],
