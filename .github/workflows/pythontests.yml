@@ -12,7 +12,8 @@ jobs:
         python-version: [2.7, 3.5, 3.6, 3.7]
 
     steps:
-    - uses: actions/checkout@v1
+    - name: Checkout
+      uses: actions/checkout@v2.0.0
     - name: Checkout submodules
       uses: textbook/git-checkout-submodule-action@2.0.0
     - name: Set up Python ${{ matrix.python-version }}
