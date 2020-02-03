@@ -12,9 +12,14 @@ jobs:
         python-version: [2.7, 3.5, 3.6, 3.7]
 
     steps:
-    - uses: actions/checkout@v1
+    - name: Checkout
+      uses: actions/checkout@v2.0.0
     - name: Checkout submodules
-      uses: textbook/git-checkout-submodule-action@2.0.0
+      shell: bash
+      run: |
+        auth_header="$(git config --local --get http.https://github.com/.extraheader)"
+        git submodule sync --recursive
+        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v1
       with:
@@ -35,5 +40,5 @@ jobs:
     - name: Install and test with pytest
       run: |
         cd ..
-        pip install ./GACF -v
-        pytest GACF/GACF/tests
+        pip install ./gacf -v
+        pytest gacf/gacf/test
