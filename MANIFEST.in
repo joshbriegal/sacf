@@ -1,3 +1,5 @@
 recursive-include gacf/include *.h
-include gacf/CMakeLists.txt
-include gacf/include/pybind11/CMakeLists.txt
+recursive-include  gacf *.cpp
+global-include gacf/CMakeLists.txt *.cmake
+recursive-include gacf *CMakeLists.txt
+recursive-include gacf/include/pybind11/include *.h
