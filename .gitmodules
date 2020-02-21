@@ -1,3 +1,0 @@
-[submodule "gacf/pybind11"]
-	path = gacf/pybind11
-	url = https://github.com/joshbriegal/pybind11.git
