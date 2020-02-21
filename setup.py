@@ -91,5 +91,6 @@ setup(
     cmdclass=dict(build_ext=CMakeBuild,
                   test=PyTest),
     tests_require=['pytest'],
-    zip_safe=False
+    zip_safe=False,
+    setup_requires=['pybind11']
 )
