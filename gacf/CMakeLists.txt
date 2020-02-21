@@ -9,7 +9,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(PYBIND11_CPP_STANDARD -std=c++14)
 
 include_directories(include)
-add_subdirectory(pybind11)
 
 file(GLOB DATASTRUCTURE datastructure/*.cpp)
 file(GLOB CORRELATOR correlator/*.cpp)

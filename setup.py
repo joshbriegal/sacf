@@ -186,4 +186,5 @@ setup(
     tests_require=["pytest"],
     zip_safe=False,
     setup_requires=["pybind11"],
+    install_requires=["pybind11"]
 )
