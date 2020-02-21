@@ -106,7 +106,7 @@ class CMakeBuild(build_ext):
 
 setup(
     name="gacf",
-    version="0.4",
+    version="0.4.4",
     author="Joshua Briegal",
     author_email="jtb34@cam.ac.uk",
     description="A generalisation of the autocorrelation function, for non-uniformly sampled timeseries data",

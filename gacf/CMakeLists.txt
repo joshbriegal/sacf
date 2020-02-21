@@ -8,12 +8,13 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(PYBIND11_CPP_STANDARD -std=c++14)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/include/pybind11)
+include_directories(${CMAKE_SOURCE_DIR}/include)
+add_subdirectory(${CMAKE_SOURCE_DIR}/include/pybind11)
 
-file(GLOB DATASTRUCTURE datastructure/*.cpp)
-file(GLOB CORRELATOR correlator/*.cpp)
+file(GLOB DATASTRUCTURE ${CMAKE_SOURCE_DIR}/datastructure/*.cpp)
+file(GLOB CORRELATOR ${CMAKE_SOURCE_DIR}/correlator/*.cpp)
 
+message(STATUS "source directory ${CMAKE_SOURCE_DIR} yeet")
 
 if(CMAKE_COMPILER_IS_GNUCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.7)
 			   message(FATAL_ERROR "Require at least gcc-4.7, version used:" ${CMAKE_CXX_COMPILER})
