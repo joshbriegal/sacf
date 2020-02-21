@@ -1,6 +1,9 @@
 *~
 *.pyc
 /build-*
+/build
+/dist
+*.egg*
 .idea/
 /example/files/
 /example/Vedad/
