@@ -117,6 +117,6 @@ setup(
         CMakeExtension("gacf.datastructure", "gacf"),
     ],
     cmdclass=dict(build_ext=CMakeBuild, test=PyTest),
-    tests_require=["pytest"],
+    tests_require=["pytest", "numpy"],
     zip_safe=False,
 )
