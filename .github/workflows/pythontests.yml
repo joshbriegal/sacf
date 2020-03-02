@@ -34,4 +34,4 @@ jobs:
     - name: Install and test with pytest
       run: |
         cd ..
-        pip install ./gacf -v test
+        pip install ./gacf -v --install-option test
