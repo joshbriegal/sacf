@@ -19,31 +19,22 @@ pip install ./gacf
 
 in python:
 
-```python
-from gacf import *
 
-lag_timeseries, correlations, corr_object = find_correlation_from_file('filepath')
-```
-
-OR
+GACF follows Astropy LombScargle implementation:
 
 ```python
-lag_timeseries, correlations, corr_object = find_correlation_from_lists(timeseries, values, errors=None)
+from gacf import GACF
+
+lag_timeseries, correlations = GACF(timeseries, values, errors=None).autocorrelation()
 ```
 
 with options:
 
 ```python
-max_lag=None, lag_resolution=None, selection_function='natural', weight_function='gaussian', alpha=None
+gacf.autocorrelation(max_lag=None, lag_resolution=None, selection_function='natural', weight_function='fast', alpha=None)
 ```
 
-new c++ implementation, should be faster:
-
-```python
-from gacf import *
-
-lag_timeseries, correlations, corr_object = find_correlation_from_lists_cpp(timeseries, values, errors=None
-```
+NOTE: If users specify `selection_function="fast"` or `weight_function="gaussian"`, a python implementation of the GACF will be invoked which is considerably slower than the default C++ option.
 
 ### Tests
 

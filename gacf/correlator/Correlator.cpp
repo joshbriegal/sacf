@@ -47,10 +47,9 @@ Correlator::Correlator(DataStructure* ds_in){
     }
     max_lag = ds->rnormalised_timeseries()->back();
     min_lag = -max_lag;
-//    lag_resolution = max_lag / M_datapoints; // Naive implementation, should use smallest difference
     lag_resolution = findMinDiff(ds->rnormalised_timeseries());
     alpha = ds->median_time();
-    num_lag_steps = (int) std::floor((max_lag - min_lag) / lag_resolution) + 3; // 2 additional elements at 0, max
+    num_lag_steps = (int) std::floor((max_lag - min_lag) / lag_resolution) + 3; // 3 additional elements at min, 0, max
     correlation_data._correlations = std::vector<double>(N_datasets * num_lag_steps);
     correlation_data._timeseries = std::vector<double>(num_lag_steps);
 };
@@ -60,9 +59,6 @@ Correlator::Correlator(DataStructure *, DataStructure *) {
      * TODO
      */
 }
-
-//std::vector<double>* Correlator::rnormalised_timeseries(){ return ds->rnormalised_timeseries(); }
-//std::vector< std::vector<double> >* Correlator::rvalues(){ return ds->rdata(); }
 
 std::vector<double> Correlator::normalised_timeseries(){ return ds->normalised_timeseries(); }
 std::vector< std::vector<double> > Correlator::values(){ return ds->data_2d(); }
@@ -98,17 +94,12 @@ void Correlator::naturalSelectionFunctionIdx(CorrelationIterator* cor_it){
                                     lower_bound(ds->rnormalised_timeseries()->begin(),
                                                 ds->rnormalised_timeseries()->end(),
                                                 (double) cor_it->shifted_timeseries[i]));
-//            std::cout << "Index for shift = " << cor_it->shifted_timeseries[i] << ": " << idx;
-            if(idx < 0){ idx = 0L; } //to prevent negative }
-//            if(idx < cor_it->shifted_timeseries.size()-1) { // i.e. we haven't found the last value
-//                if (abs(cor_it->shifted_timeseries[i] - ds->rnormalised_timeseries()->at(idx + 1))
-//                    < abs(cor_it->shifted_timeseries[i] - ds->rnormalised_timeseries()->at(idx))) { idx = idx + 1; }
-//            }
+            if(idx < 0){ idx = 0L; } //to prevent negative 
+
             if(idx != 0){ //i.e. not the first index
                 if (abs(cor_it->shifted_timeseries[i] - ds->rnormalised_timeseries()->at(idx - 1))
                     < abs(cor_it->shifted_timeseries[i] - ds->rnormalised_timeseries()->at(idx))) { idx = idx - 1; }
             }
-//            std::cout << " (" << idx << " adjusted)" << std::endl;
             cor_it->selection_indices.push_back(idx);
         }
     }
@@ -121,7 +112,7 @@ void Correlator::fastSelectionFunctionIdx(CorrelationIterator* cor_it){
      * by finding the closest point for the first data point and filling in the rest by index.
      */
     for(auto const& time_point: *ds->rnormalised_timeseries()){
-        if((time_point + cor_it->k) > ds->rnormalised_timeseries()->back()){
+        if((time_point + cor_it->k) >= ds->rnormalised_timeseries()->back()){
             break;
         }
         else { cor_it->shifted_timeseries.push_back(time_point + cor_it->k); }
@@ -234,14 +225,12 @@ void Correlator::addCorrelationData(CorrelationIterator* col_it, int timestep_nu
     for(int j = 0; j < N_datasets; j++){
         correlation_data._correlations[timestep_number + num_lag_steps * j] = col_it->correlation[j];
     }
-//    this->correlation_data._correlations.push_back(col_it->correlation);
 }
 
 void Correlator::cleanCorrelationData(int i){
     // clean up extra elements at end of vector not used.
     correlation_data._timeseries.resize(i);
     std::vector<double> copy_correlations = std::vector<double>(N_datasets * i);
-//    std::vector< std::vector<double> > tcorrs = correlations();
     for(int j = 0; j < N_datasets; j++){
         auto start = correlation_data._correlations.begin() + (j * num_lag_steps);
         std::copy(start, start + i, copy_correlations.begin() + (j * i));
@@ -259,8 +248,11 @@ void Correlator::calculateStandardCorrelation(){
         if(k==0){
             is_positive = true;
         }
-        if(k > 0 && !is_positive){
+        if((k > 0) && (!is_positive)){
+            // we have gone beyond 0, so calculate for correlation 0 and increment counter.
             _calculateStandardCorrelation(0, i);
+            is_positive = true;
+            i++;
         }
         _calculateStandardCorrelation(k, i);
         k += lag_resolution;
@@ -281,19 +273,3 @@ void Correlator::_calculateStandardCorrelation(double k, int i){
     addCorrelationData(col_it, i);
     delete col_it;
 }
-
-//void Correlator::standardCorrelation(double k, MemberPointerType weight_function, double alpha){
-//    // define weight function & alpha (scale length of weight function)
-//
-//    auto const& col_it = new CorrelationIterator(k);
-//    this->naturalSelectionFunctionIdx(col_it);
-////    this->fastSelectionFunctionIdx(col_it);
-//    this->deltaT(col_it);
-//    this->getWeights(col_it, weight_function, alpha);
-//    this->findCorrelation(col_it);
-//    this->correlation_data.t.push_back(k);
-//    this->correlation_data.X.push_back(col_it->correlation);
-//    delete col_it;
-//}
-
-
