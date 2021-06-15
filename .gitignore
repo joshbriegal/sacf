@@ -5,7 +5,5 @@
 /dist
 *.egg*
 .idea/
-/example/files/
-/example/Vedad/
-/example/processed
-/example/NG*/
+**vscode
+/.tox
