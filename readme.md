@@ -2,7 +2,7 @@
 
 # Generalised Autocorrelation Function
 
-(credit Larz Kreutzer, c++ implementation by Josh Briegal jtb34@cam.ac.uk)
+(credit Lars Kreutzer, c++ implementation by Josh Briegal jtb34@cam.ac.uk)
 
 ## Installation
 
