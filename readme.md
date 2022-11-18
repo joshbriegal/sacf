@@ -34,7 +34,7 @@ with options:
 gacf.autocorrelation(max_lag=None, lag_resolution=None, selection_function='natural', weight_function='fast', alpha=None)
 ```
 
-NOTE: If users specify `selection_function="fast"` or `weight_function="gaussian"`, a python implementation of the GACF will be invoked which is considerably slower than the default C++ option.
+NOTE: If users specify `selection_function="fast"`, `weight_function="fractional_squared"` or `weight_function="gaussian"`, a python implementation of the GACF will be invoked which is considerably slower than the default C++ option.
 
 ### Tests
 

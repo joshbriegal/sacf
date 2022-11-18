@@ -9,6 +9,7 @@ SELECTION_FUNCTIONS = {
 WEIGHT_FUNCTIONS = {
     "gaussian": Correlator.getGaussianWeights,
     "fractional": Correlator.getFractionWeights,
+    "fractional_squared": Correlator.getFractionSquaredWeights,
 }
 
 GACF_LOG_MESSAGE = (
@@ -113,7 +114,7 @@ class GACF:
             lag_resolution (float, optional): lag resolution in units of time. Defaults to None.
             alpha (float, optional): weight function characteristic length scale, default is t.median_time. Defaults to None.
             selection_function (str, optional): 'fast' or 'natural' - see paper for more details. Defaults to "natural".
-            weight_function: (str, optional) 'gaussian' or 'fractional' see paper for more details. Defaults to "fractional".
+            weight_function: (str, optional) 'fractional', 'gaussian' or 'fractional_squared' see paper for more details. Defaults to "fractional".
             return_correlator (bool, optional): return correlator object. Defaults to False.
 
         Returns:

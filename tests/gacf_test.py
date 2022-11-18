@@ -450,10 +450,18 @@ class TestGACF(unittest.TestCase):
         gacf_instance =  GACF(filename=os.path.join(THIS_DIR, "csv_with_titles.csv"))
         self.assertIsInstance(gacf_instance.data, gacf.datastructure.DataStructure)
 
-    def test_specified_function_autocorrelation(self):
+    def test_specified_function_autocorrelation_gaussian(self):
         lag_timeseries, correlations, corr = GACF(
             self.timestamps1, self.data1
         ).autocorrelation(return_correlator=True, weight_function="gaussian")
+
+        self.assertEqual(self.negative_correlations_lag_timeseries, lag_timeseries)
+        self.assertEqual(self.negative_correlations_solution, correlations)
+
+    def test_specified_function_autocorrelation_fractional_squared(self):
+        lag_timeseries, correlations, corr = GACF(
+            self.timestamps1, self.data1
+        ).autocorrelation(return_correlator=True, weight_function="fractional_squared")
 
         self.assertEqual(self.negative_correlations_lag_timeseries, lag_timeseries)
         self.assertEqual(self.negative_correlations_solution, correlations)
