@@ -90,9 +90,11 @@ public:
     void clearCorrelation() {correlation_data = *new CorrelationData; };
 
     double fractionWeightFunction(double);
+    double fractionSquaredWeightFunction(double);
     double gaussianWeightFunction(double);
 
     void getFractionWeights(CorrelationIterator*);
+    void getFractionSquaredWeights(CorrelationIterator*);
     void getGaussianWeights(CorrelationIterator*);
 
     void setMaxLag(double);

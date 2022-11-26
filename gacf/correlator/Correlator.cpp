@@ -151,6 +151,9 @@ double Correlator::fractionWeightFunction(double delta_t){
     return 1 / (1 + (delta_t / alpha));
 }
 
+double Correlator::fractionSquaredWeightFunction(double delta_t){
+    return 1 / (1 + (delta_t / alpha) * (delta_t / alpha));
+}
 
 double Correlator::gaussianWeightFunction(double delta_t){
     return exp( -((delta_t) * (delta_t)) / (2 * alpha * alpha));
@@ -170,6 +173,15 @@ void Correlator::getFractionWeights(CorrelationIterator* cor_it){
     int i = 0;
     for(auto const& value: cor_it->delta_t){
         cor_it->weights.push_back(fractionWeightFunction(value));
+        i++;
+    }
+    cor_it->delta_t.clear();
+}
+
+void Correlator::getFractionSquaredWeights(CorrelationIterator* cor_it){
+    int i = 0;
+    for(auto const& value: cor_it->delta_t){
+        cor_it->weights.push_back(fractionSquaredWeightFunction(value));
         i++;
     }
     cor_it->delta_t.clear();
