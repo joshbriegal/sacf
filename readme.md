@@ -1,7 +1,8 @@
 ![Python Test Status](https://github.com/joshbriegal/sacf/workflows/Python%20tests/badge.svg)
 
-# Generalised Autocorrelation Function
+# Selective Estimator for the Autocorrelation Function
 
+S-ACF: A selective estimator for the autocorrelation function of irregularly sampled time series
 (credit Lars Kreutzer, c++ implementation by Josh Briegal jtb34@cam.ac.uk)
 
 ## Installation
