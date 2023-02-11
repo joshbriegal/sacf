@@ -105,16 +105,16 @@ class CMakeBuild(build_ext):
 
 
 setup(
-    name="gacf",
-    version="1.0.0",
+    name="sacf",
+    version="1.1",
     author="Joshua Briegal",
     author_email="jtb34@cam.ac.uk",
     description="A generalisation of the autocorrelation function, for non-uniformly sampled timeseries data",
     long_description="",
-    packages=["gacf"],
+    packages=["sacf"],
     ext_modules=[
-        CMakeExtension("gacf.correlator", "gacf"),
-        CMakeExtension("gacf.datastructure", "gacf"),
+        CMakeExtension("sacf.correlator", "sacf"),
+        CMakeExtension("sacf.datastructure", "sacf"),
     ],
     cmdclass=dict(build_ext=CMakeBuild, test=PyTest),
     tests_require=["pytest", "numpy"],

@@ -1,4 +1,4 @@
-![Python Test Status](https://github.com/joshbriegal/gacf/workflows/Python%20tests/badge.svg)
+![Python Test Status](https://github.com/joshbriegal/sacf/workflows/Python%20tests/badge.svg)
 
 # Generalised Autocorrelation Function
 
@@ -14,27 +14,27 @@ Requirements:
 From above top level directory run
 
 ```
-pip install ./gacf
+pip install ./sacf
 ```
 
 in python:
 
 
-GACF follows Astropy LombScargle implementation:
+SACF follows Astropy LombScargle implementation:
 
 ```python
-from gacf import GACF
+from sacf import SACF
 
-lag_timeseries, correlations = GACF(timeseries, values, errors=None).autocorrelation()
+lag_timeseries, correlations = SACF(timeseries, values, errors=None).autocorrelation()
 ```
 
 with options:
 
 ```python
-gacf.autocorrelation(max_lag=None, lag_resolution=None, selection_function='natural', weight_function='fast', alpha=None)
+sacf.autocorrelation(max_lag=None, lag_resolution=None, selection_function='natural', weight_function='fast', alpha=None)
 ```
 
-NOTE: If users specify `selection_function="fast"`, `weight_function="fractional_squared"` or `weight_function="gaussian"`, a python implementation of the GACF will be invoked which is considerably slower than the default C++ option.
+NOTE: If users specify `selection_function="fast"`, `weight_function="fractional_squared"` or `weight_function="gaussian"`, a python implementation of the SACF will be invoked which is considerably slower than the default C++ option.
 
 ### Tests
 

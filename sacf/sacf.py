@@ -12,14 +12,13 @@ WEIGHT_FUNCTIONS = {
     "fractional_squared": Correlator.getFractionSquaredWeights,
 }
 
-GACF_LOG_MESSAGE = (
-    " ######      ###     ######  ######## \n"
-    "##    ##    ## ##   ##    ## ##       \n"
-    "##         ##   ##  ##       ##       \n"
-    "##   #### ##     ## ##       ######   \n"
-    "##    ##  ######### ##       ##       \n"
-    "##    ##  ##     ## ##    ## ##       \n"
-    " ######   ##     ##  ######  ##    \n"
+SACF_LOG_MESSAGE = (
+    "███████╗ █████╗  ██████╗███████╗\n"
+    "██╔════╝██╔══██╗██╔════╝██╔════╝\n"
+    "███████╗███████║██║     █████╗  \n"
+    "╚════██║██╔══██║██║     ██╔══╝  \n"
+    "███████║██║  ██║╚██████╗██║     \n"
+    "╚══════╝╚═╝  ╚═╝ ╚═════╝╚═╝     \n"
     "------------------------------\n"
     "Number of Data Points: {no_data}\n"
     "Number of Lag Timesteps: {no_lag_points}\n"
@@ -28,7 +27,7 @@ GACF_LOG_MESSAGE = (
 )
 
 
-class GACF:
+class SACF:
     """Compute the Generalised Autocorrelation Function (G-ACF)"""
 
     def __init__(self, timeseries=None, values=None, errors=None, filename=None):
