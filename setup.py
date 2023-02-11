@@ -106,10 +106,10 @@ class CMakeBuild(build_ext):
 
 setup(
     name="sacf",
-    version="1.1",
+    version="2.0",
     author="Joshua Briegal",
     author_email="jtb34@cam.ac.uk",
-    description="A generalisation of the autocorrelation function, for non-uniformly sampled timeseries data",
+    description="A selective estimator of the autocorrelation function for non-uniformly sampled timeseries data",
     long_description="",
     packages=["sacf"],
     ext_modules=[
