@@ -1,7 +1,7 @@
 """ Root module of package """
 
-from .gacf import (
-    GACF_LOG_MESSAGE,
-    GACF,
+from .sacf import (
+    SACF_LOG_MESSAGE,
+    SACF,
 )
 from .datastructure import EmptyDataStructureException, BadDataFileReadException
