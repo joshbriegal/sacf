@@ -5,6 +5,8 @@
 S-ACF: A selective estimator for the autocorrelation function of irregularly sampled time series
 (credit Lars Kreutzer, c++ implementation by Josh Briegal jtb34@cam.ac.uk)
 
+The associated publication, which includes a detailed description of the S-ACF, can be found at [arXiv:2304.10641](https://arxiv.org/abs/2304.10641).
+
 ## Installation
 
 Requirements:
