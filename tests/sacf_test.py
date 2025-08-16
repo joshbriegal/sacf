@@ -8,7 +8,6 @@ import sacf.datastructure
 import sacf.correlator
 import numpy as np
 import os
-import time
 
 from sacf import SACF
 
@@ -403,7 +402,6 @@ class TestSACF(unittest.TestCase):
         self.assertIsInstance(sacf_instance.data, sacf.datastructure.DataStructure)
 
     def test_SACF_correlation(self):
-
         lag_timeseries, correlations = SACF(
             self.timestamps1, self.data1
         ).autocorrelation()
@@ -412,7 +410,6 @@ class TestSACF(unittest.TestCase):
         self.assertEqual(self.negative_correlations_solution, correlations)
 
     def test_SACF_correlation_return_corr(self):
-
         lag_timeseries, correlations, corr = SACF(
             self.timestamps1, self.data1
         ).autocorrelation(return_correlator=True)
@@ -431,23 +428,23 @@ class TestSACF(unittest.TestCase):
         self.assertEqual(self.simple_correlation_solution, correlations)
 
     def test_two_correlation(self):
-        lag_timeseries, correlations, = SACF(
-            self.timestamps1, [self.data1, self.data1]
-        ).autocorrelation(min_lag=0)
+        (
+            lag_timeseries,
+            correlations,
+        ) = SACF(self.timestamps1, [self.data1, self.data1]).autocorrelation(min_lag=0)
 
         self.assertEqual(self.simple_correlations_lag_timeseries, lag_timeseries)
         self.assertEqual(self.two_correlation_solution, correlations)
 
     def test_add_zero_lag(self):
-        lag_timeseries, _ = SACF(
-            self.timestamps1, self.data1
-        ).autocorrelation(lag_resolution=1.5)
+        lag_timeseries, _ = SACF(self.timestamps1, self.data1).autocorrelation(
+            lag_resolution=1.5
+        )
 
         self.assertEqual(self.add_zero_lag_timeseries, lag_timeseries)
 
     def test_creation_from_file(self):
-
-        sacf_instance =  SACF(filename=os.path.join(THIS_DIR, "csv_with_titles.csv"))
+        sacf_instance = SACF(filename=os.path.join(THIS_DIR, "csv_with_titles.csv"))
         self.assertIsInstance(sacf_instance.data, sacf.datastructure.DataStructure)
 
     def test_specified_function_autocorrelation_gaussian(self):
@@ -472,8 +469,9 @@ class TestSACF(unittest.TestCase):
         ).autocorrelation(return_correlator=True, selection_function="fast")
 
         self.assertEqual(self.negative_correlations_lag_timeseries, lag_timeseries)
-        self.assertNotEqual(self.negative_correlations_solution, correlations)  # fast indexing does not work...
-
+        self.assertNotEqual(
+            self.negative_correlations_solution, correlations
+        )  # fast indexing does not work...
 
 
 if __name__ == "__main__":

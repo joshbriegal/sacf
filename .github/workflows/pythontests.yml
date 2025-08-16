@@ -3,26 +3,35 @@ name: Python tests
 on: [push, pull_request]
 
 jobs:
-  build:
-
+  test:
+    name: test with ${{ matrix.env }} on ${{ matrix.os }}
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 4
+      fail-fast: false
       matrix:
-        python-version: [3.7, 3.8, 3.9, 3.10.9]
-
+        env:
+          - "3.8"
+          - "3.9"
+          - "3.10"
+          - "3.11"
+          - "3.12"
+          - "3.13"
     steps:
-    - name: Checkout
-      uses: actions/checkout@v2.0.0
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install tox tox-gh-actions
-        sudo apt-get update
-        sudo apt-get install cmake
-    - name: Test with Tox
-      run: tox
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v3
+      - name: Install tox
+        run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv --with tox-gh
+      - name: Install Python
+        if: matrix.env != '3.13'
+        run: uv python install --python-preference only-managed ${{ matrix.env }}
+      - name: Setup test suite
+        run: tox run -vv --notest --skip-missing-interpreters false
+        env:
+          TOX_GH_MAJOR_MINOR: ${{ matrix.env }}
+      - name: Run test suite
+        run: tox run
+        env:
+          TOX_GH_MAJOR_MINOR: ${{ matrix.env }}
